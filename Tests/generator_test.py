@@ -10,6 +10,9 @@ class TestGeneratorMethods(unittest.TestCase):
     def setUpClass(cls):
         cls.generator = Generator(csv_path=Path.cwd().parent / "naming_reference.csv")
 
+    def setUp(self):
+        self.generator.title_name = ""
+
     def test_init_loads_references(self):
         self.assertGreater(len(self.generator.examples), 100)
 
