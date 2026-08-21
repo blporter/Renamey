@@ -38,3 +38,7 @@ to this:
 </pre>
 
 This is the supported naming convention listed by Jellyfin in their docs: <https://jellyfin.org/docs/general/server/media/shows/>
+
+### TODO
+- [ ] Add an optional `verbosity` flag.
+- [ ] Add an optional `dry-run` flag with planned execution output.
