@@ -107,20 +107,40 @@ class TestGeneratorMethods(unittest.TestCase):
             "[Erai-raws] Tsue to Tsurugi no Wistoria (2025) 2nd Season - 12 [720p CR WEB-DL AVC AAC][MultiSub][5FE7D4DD]",
             "[Yameii] Witch Hat Atelier - S01E11 [English Dub] [CR WEB-DL 1080p H264 AAC] [DC7B989F] (Tongari Boushi no Atelier).mp4",
             "[Erai-raws] Digimon Beatbreak - 43 [1080p CR WEBRip HEVC AAC][MultiSub][BB4236AA].mkv",
-            "[DB]Vanitas no Karte_2022_-_02_(Dual Audio_10bit_BD1080p_x265).mov"]
-        titles = ["Tsue to Tsurugi no Wistoria (2025)",
+            "[DB]Vanitas no Karte_2022_-_02_(Dual Audio_10bit_BD1080p_x265).mov",
+            "E12.mkv"]
+        titles = ["Tsue to Tsurugi no Wistoria",
                   "Witch Hat Atelier",
                   "Digimon Beatbreak",
-                  "Vanitas no Karte (2022)"]
+                  "Vanitas no Karte",
+                  "Kaiju No.8"]
         expected_names = ["Tsue to Tsurugi no Wistoria E12",
                           "Witch Hat Atelier E11.mp4",
                           "Digimon Beatbreak E43.mkv",
-                          "Vanitas no Karte E02.mov"]
+                          "Vanitas no Karte E02.mov",
+                          "Kaiju No.8 E12.mkv"]
         got_names = []
         for i, name in enumerate(filenames):
             self.generator.title_name = titles[i]
             got_names.append(self.generator.get_new_name(name, "episode"))
         self.assertEqual(expected_names, got_names)
+
+    def test_get_new_name_saves_title_and_returns_expected_episodes(self):
+        filenames = [
+            "[Erai-raws] Tsue to Tsurugi no Wistoria (2025) [720p CR WEB-DL AVC AAC][MultiSub][5FE7D4DD]",
+            "[Yameii] Witch Hat Atelier - [English Dub] [CR WEB-DL 1080p H264 AAC] [DC7B989F] (Tongari Boushi no Atelier)",
+            "[DB]Vanitas no Karte_2022_-_(Dual Audio_10bit_BD1080p_x265)"]
+        episodes = ["E01.mkv", "Episode 5", "E7.mp4"]
+        expected_titles = ["Tsue to Tsurugi no Wistoria",
+                           "Witch Hat Atelier",
+                           "Vanitas no Karte"]
+        expected_episodes = ["E01.mkv", "E05", "E07.mp4"]
+        for i, name in enumerate(filenames):
+            self.generator.get_new_name(name, "title")
+            self.assertEqual(expected_titles[i], self.generator.title_name)
+            for j, episode in enumerate(episodes):
+                got_episode = self.generator.get_new_name(episode, "episode")
+                self.assertEqual(f"{expected_titles[i]} {expected_episodes[j]}", got_episode)
 
 
 if __name__ == '__main__':

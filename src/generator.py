@@ -13,6 +13,7 @@ class Generator:
 
     SEASON_COMPILE = re.compile(r"^Season \d+$", re.IGNORECASE)
     EPISODE_COMPILE = re.compile(r"\bE\d{2,}\b", re.IGNORECASE)
+    DATE_COMPILE = re.compile(r"\s*\((?:19|20)\d{2}(?:-(?:19|20)\d{2})?\)\s*$")
 
     title_name = ""
 
@@ -94,7 +95,8 @@ class Generator:
             """
         )
         if filetype == "episode" and self.title_name.strip():
-            prompt += f"\nUse this as the episode's title for the filename: {self.title_name}"
+            prompt += f"\nThe output MUST start with this exact string, character for character: {self.title_name}"
+            prompt += "\nDo NOT re-capitalize, re-case, translate, reorder, or otherwise alter it. Append the episode token (and the extension, if any) after it, even if the input name is already correctly formatted."
         return prompt
 
     def get_new_name(self, filename: str, filetype: str) -> str:
@@ -111,5 +113,9 @@ class Generator:
                                           "content": self.build_prompt(filename, filetype)}],
                                options={"temperature": 0.0},
                                stream=False)
-
-        return response["message"]["content"].strip()
+        new_name = response["message"]["content"].strip()
+        if "\n" in new_name:
+            raise ValueError(f"Model returned prose instead of a filename: {new_name!r}")
+        if filetype == "title":
+            self.title_name = self.DATE_COMPILE.sub("", new_name).strip()
+        return new_name
