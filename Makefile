@@ -1,5 +1,5 @@
 run:
-	.venv/bin/python3 main.py -f "$(FILEPATH)"
+	.venv/bin/python3 src/main.py -f "$(FILEPATH)"
 
 build:
-	pyinstaller --onefile --paths=. --hidden-import=generator --add-data="naming_reference.csv:." main.py
+	pyinstaller --onefile --paths=src --hidden-import=generator --add-data="naming_reference.csv:." --name="renamey" main.py

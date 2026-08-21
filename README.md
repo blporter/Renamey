@@ -1,17 +1,17 @@
 # Renamey
 
-Use local AI models to bulk rename junk files into clean snake_case.
+Use local AI models to bulk rename junk files into clean Title Case.
 
 ### Setup
 
 Use `make run FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a
 Unix Executable.
 
-It can then be run as a script via `./main -f "/Absolute/Path/To/Junk/Name"`.
+It can then be run as a script via `./renamey -f "/Absolute/Path/To/Junk/Name"`.
 
 ### Overview
 
-The `main.py` script handles argument parsing and file traversing for nested folder structures, while `generator.py`
+The `renamey.py` script handles argument parsing and file traversing for nested folder structures, while `generator.py`
 handles the AI workflow and context references.
 
 The models used are `gemma4:e4b-mlx` for title name generation, `llama3.1:8b` for season and episode name parsing, and
@@ -22,7 +22,7 @@ and their expected "clean" counterparts.
 
 A "messy" show with nested season folders will go from this:
 <pre>
-├── [RUBaDUB] Kaiju No. 8 (S1 Complete) (1080p) (Dual Audio) 
+├── [RUBaDUB] Kaiju No. 8 (S1 Complete) (2022) (1080p) (Dual Audio) 
     ├── Kaiju No. 8 S1
         ├── [RUBaDUB][1080p] Kaiju No. 8 - 01 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
         ├── [RUBaDUB][1080p] Kaiju No. 8 - 02 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
@@ -30,11 +30,11 @@ A "messy" show with nested season folders will go from this:
 </pre>
 to this:
 <pre>
-├── kaiju_no_8
-    ├── season_01
-        ├── episode_01.mkv
-        ├── episode_02.mkv
-        └── episode_03.mkv
+├── Kaiju No. 8 (2022)
+    ├── Season 01
+        ├── Kaiju No. 8 E01.mkv
+        ├── Kaiju No. 8 E02.mkv
+        └── Kaiju No. 8 E03.mkv
 </pre>
 
-I have found that this naming convention makes automated file detection more predictable for media servers.
+This is the supported naming convention listed by Jellyfin in their docs: <https://jellyfin.org/docs/general/server/media/shows/>
