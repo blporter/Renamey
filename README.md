@@ -49,3 +49,4 @@ This is the supported naming convention listed by Jellyfin in their docs: <https
 - [ ] Add an optional `dry-run` flag with planned execution output.
 - [x] Allow passing in different models.
   - This could potentially cause problems, as I'm not sure what other models will output. Once we add `dry-run`, it shouldn't be an issue.
+- [ ] Movie handling is finicky.
