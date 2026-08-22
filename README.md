@@ -21,7 +21,7 @@ Ex:
 
 The `main.py` script handles traversing for nested folder structures, `parser.py` handles argument parsing and validation, and `generator.py` handles the AI workflow and context references.
 
-The default models used are `gemma4:e4b-mlx` for title name generation, `llama3.1:8b` for season and episode name parsing. For RAG references and context, we use `nomic-embed-text`.
+The default models used are `gemma4:e4b-mlx` for title name generation and `llama3.1:8b` for season and episode name parsing. For RAG references and context, we use `nomic-embed-text`.
 
 The data source for RAG is the local database `naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts.
 
