@@ -1,84 +1,53 @@
-import argparse
-import json
 import os
 import re
-from enum import Enum
 from pathlib import Path
 
 import logging
 
 from generator import Generator
+from parser import FileParser
+from models import FileType
 
-logging.basicConfig(level=logging.DEBUG)
-
-
-class FileType(Enum):
-    TITLE = "title"
-    SEASON = "season"
-    EPISODE = "episode"
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-class FileParser:
-    gen = Generator(Path.cwd() / "naming_reference.csv")
-    ignore_set = []
+def get_new_path(gen: Generator, filepath: Path, filetype: FileType) -> Path:
+    path_prefix = filepath.parent
+    cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
+    new_name = gen.get_new_name(cleaned_path_name, filetype)
+    return path_prefix / new_name
 
-    def __init__(self):
-        self.ignore_set = self.build_ignore_set()
 
-    @staticmethod
-    def build_ignore_set() -> set:
-        ignore_path = Path.cwd() / "ignore_list.json"
-        with open(ignore_path, "r") as file:
-            config = json.load(file)
-            return set(config.get("ignore_files", []))
-
-    @staticmethod
-    def get_path_from_args() -> Path:
-        parser = argparse.ArgumentParser(description="Process a folder or file's absolute filepath.")
-        parser.add_argument('-f', '--filepath', type=str, required=True)
-        args = parser.parse_args()
-
-        filepath = Path(os.path.expandvars(args.filepath)).expanduser()
-        if not filepath.is_absolute():
-            logging.debug(f"{filepath} is relative, resolving to {Path.cwd() / Path(filepath)}")
-            filepath = Path.cwd() / Path(filepath)
-
-        if not filepath.exists():
-            raise argparse.ArgumentTypeError(f"{args.filepath} does not exist.")
-
-        return filepath
-
-    def get_new_path(self, filepath: Path, filetype: FileType) -> Path:
-        path_prefix = filepath.parent
-        cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
-        new_name = self.gen.get_new_name(cleaned_path_name, filetype.value)
-        return path_prefix / new_name
-
-    def handle_nested_folders(self, filepath: Path):
-        if filepath.name in self.ignore_set:
-            logging.debug(f"Skipping ignored file: {filepath.name}")
-            return
-        if filepath.is_dir():
-            folder_path = self.get_new_path(filepath, FileType.SEASON)
-            os.rename(filepath, folder_path)
-            logging.info(f"Renamed season folder: {filepath} -> {folder_path}")
-            for file in folder_path.iterdir():
-                self.handle_nested_folders(file)
-        else:
-            new_file = self.get_new_path(filepath, FileType.EPISODE)
-            os.rename(filepath, new_file)
-            logging.info(f"Renamed episode: {filepath} -> {new_file}")
+def handle_nested_folders(gen: Generator, ignore_set: set, filepath: Path):
+    if filepath.name in ignore_set:
+        logging.debug(f"Skipping ignored file: {filepath.name}")
+        return
+    if filepath.is_dir():
+        folder_path = get_new_path(gen, filepath, FileType.SEASON)
+        os.rename(filepath, folder_path)
+        logging.info(f"Renamed season folder: {filepath} -> {folder_path}")
+        for file in folder_path.iterdir():
+            handle_nested_folders(gen, ignore_set, file)
+    else:
+        new_file = get_new_path(gen, filepath, FileType.EPISODE)
+        os.rename(filepath, new_file)
+        logging.info(f"Renamed episode: {filepath} -> {new_file}")
 
 
 def main():
     parser = FileParser()
-    filepath = parser.get_path_from_args()
-    new_path = parser.get_new_path(filepath, FileType.TITLE)
+    filepath, title_model, episode_model = parser.get_parts_from_args()
+    gen = Generator(Path.cwd() / "naming_reference.csv", title_model, episode_model)
+
+    new_path = get_new_path(gen, filepath, FileType.TITLE)
     os.rename(filepath, new_path)
     logging.info(f"Renamed title: {filepath} -> {new_path}")
+
+    ignore_set = parser.build_ignore_set()
     if new_path.is_dir():
         for file in new_path.iterdir():
-            parser.handle_nested_folders(file)
+            handle_nested_folders(gen, ignore_set, file)
 
 
 if __name__ == '__main__':

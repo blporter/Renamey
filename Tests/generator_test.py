@@ -3,12 +3,18 @@ import unittest
 from pathlib import Path
 
 from src.generator import Generator
+from src.models import FileType
 
 
 class TestGeneratorMethods(unittest.TestCase):
+    TITLE_MODEL = "gemma4:e4b-mlx"
+    EPISODE_MODEL = "llama3.1:8b"
+
     @classmethod
     def setUpClass(cls):
-        cls.generator = Generator(csv_path=Path.cwd().parent / "naming_reference.csv")
+        cls.generator = Generator(csv_path=Path.cwd().parent / "naming_reference.csv",
+                                  title_model=cls.TITLE_MODEL,
+                                  episode_model=cls.EPISODE_MODEL)
 
     def setUp(self):
         self.generator.title_name = ""
@@ -18,7 +24,7 @@ class TestGeneratorMethods(unittest.TestCase):
 
     def test_get_references_returns_expected_titles(self):
         filename = "Long name title"
-        references = self.generator.get_useful_references(filename, "title")
+        references = self.generator.get_useful_references(filename, FileType.TITLE)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -26,7 +32,7 @@ class TestGeneratorMethods(unittest.TestCase):
 
     def test_get_references_returns_expected_seasons(self):
         filename = "S01Part1"
-        references = self.generator.get_useful_references(filename, "season")
+        references = self.generator.get_useful_references(filename, FileType.SEASON)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -35,7 +41,7 @@ class TestGeneratorMethods(unittest.TestCase):
 
     def test_get_references_returns_expected_episodes(self):
         filename = "Long name title - Season 1 Episode 1.mp4"
-        references = self.generator.get_useful_references(filename, "episode")
+        references = self.generator.get_useful_references(filename, FileType.EPISODE)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -62,7 +68,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "Tsue to Tsurugi no Wistoria"]
         got_names = []
         for name in filenames:
-            got_names.append(self.generator.get_new_name(name, "title"))
+            got_names.append(self.generator.get_new_name(name, FileType.TITLE))
         self.assertEqual(expected_names, got_names)
 
     def test_get_new_name_returns_expected_seasons(self):
@@ -85,7 +91,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "Season 06"]
         got_names = []
         for name in filenames:
-            got_names.append(self.generator.get_new_name(name, "season"))
+            got_names.append(self.generator.get_new_name(name, FileType.SEASON))
         self.assertEqual(expected_names, got_names)
 
     def test_get_new_name_returns_expected_episodes(self):
@@ -102,7 +108,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "E12.png"]
         got_names = []
         for name in filenames:
-            got_names.append(self.generator.get_new_name(name, "episode"))
+            got_names.append(self.generator.get_new_name(name, FileType.EPISODE))
         self.assertEqual(expected_names, got_names)
 
     def test_get_new_name_returns_expected_episodes_with_existing_title(self):
@@ -125,7 +131,7 @@ class TestGeneratorMethods(unittest.TestCase):
         got_names = []
         for i, name in enumerate(filenames):
             self.generator.title_name = titles[i]
-            got_names.append(self.generator.get_new_name(name, "episode"))
+            got_names.append(self.generator.get_new_name(name, FileType.EPISODE))
         self.assertEqual(expected_names, got_names)
 
     def test_get_new_name_saves_title_and_returns_expected_episodes(self):
@@ -139,10 +145,10 @@ class TestGeneratorMethods(unittest.TestCase):
                            "Vanitas no Karte"]
         expected_episodes = ["E01.mkv", "E05", "E07.mp4"]
         for i, name in enumerate(filenames):
-            self.generator.get_new_name(name, "title")
+            self.generator.get_new_name(name, FileType.TITLE)
             self.assertEqual(expected_titles[i], self.generator.title_name)
             for j, episode in enumerate(episodes):
-                got_episode = self.generator.get_new_name(episode, "episode")
+                got_episode = self.generator.get_new_name(episode, FileType.EPISODE)
                 self.assertEqual(f"{expected_titles[i]} {expected_episodes[j]}", got_episode)
 
 

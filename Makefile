@@ -1,5 +1,13 @@
-run:
-	.venv/bin/python3 src/main.py -f "$(FILEPATH)"
+TITLE_MODEL ?= "gemma4:e4b-mlx"
+EPISODE_MODEL ?= "llama3.1:8b"
+
+install-models:
+	ollama pull $(TITLE_MODEL)
+	ollama pull $(EPISODE_MODEL)
+	ollama pull "nomic-embed-text"
+
+run: install-models
+	.venv/bin/python3 src/main.py -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL)
 
 build:
-	pyinstaller --onefile --paths=src --hidden-import=generator --add-data="naming_reference.csv:." --name="renamey" src/main.py
+	pyinstaller --onefile --paths=src --add-data="naming_reference.csv:." --add-data="ignore_list.json:." --name="renamey" src/main.py
