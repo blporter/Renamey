@@ -1,6 +1,7 @@
 import os
 import re
 from pathlib import Path
+from argparse import ArgumentTypeError
 
 import logging
 
@@ -37,7 +38,11 @@ def handle_nested_folders(gen: Generator, ignore_set: set, filepath: Path):
 
 def main():
     parser = FileParser()
-    filepath, title_model, episode_model = parser.get_parts_from_args()
+    try:
+        filepath, title_model, episode_model = parser.get_parts_from_args()
+    except ArgumentTypeError as e:
+        print(f"Failed to parse arguments: {e}")
+        return
     gen = Generator(Path.cwd() / "naming_reference.csv", title_model, episode_model)
 
     new_path = get_new_path(gen, filepath, FileType.TITLE)

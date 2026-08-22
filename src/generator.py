@@ -1,9 +1,9 @@
 import csv
 import re
 from pathlib import Path
+from numpy import dot, linalg
 
 import ollama
-import numpy as np
 
 from models import FileType
 
@@ -48,7 +48,7 @@ class Generator:
 
     @staticmethod
     def cosine_similarity(v1, v2):
-        return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+        return dot(v1, v2) / (linalg.norm(v1) * linalg.norm(v2))
 
     def get_useful_references(self, filename: str, filetype: FileType) -> list:
         target_res = ollama.embeddings(model=self.EMBED_MODEL, prompt=f"search_query: {filename.lower()}")
