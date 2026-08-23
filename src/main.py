@@ -28,7 +28,7 @@ def handle_nested_folders(gen: Generator, ignore_set: set, filepath: Path, dry_r
         return
     if filepath.is_dir():
         folder_path = get_new_path(gen, filepath, FileType.SEASON)
-        print(f"Season: {filepath.name} -> {folder_path.name}")
+        print(f"\t├── Season: {filepath.name} --> {folder_path.name}")
         if not dry_run:
             os.rename(filepath, folder_path)
             filepath = folder_path
@@ -36,7 +36,7 @@ def handle_nested_folders(gen: Generator, ignore_set: set, filepath: Path, dry_r
             handle_nested_folders(gen, ignore_set, file, dry_run)
     else:
         new_file = get_new_path(gen, filepath, FileType.EPISODE)
-        print(f"Episode: {filepath.name} -> {new_file.name}")
+        print(f"\t\t├── Episode: {filepath.name} --> {new_file.name}")
         if not dry_run:
             os.rename(filepath, new_file)
 
@@ -51,7 +51,7 @@ def main():
     gen = Generator(Path.cwd() / "naming_reference.csv", title_model, episode_model)
 
     new_path = get_new_path(gen, filepath, FileType.TITLE)
-    print(f"Title: {filepath.name} -> {new_path.name}")
+    print(f"├── Title: {filepath.name} --> {new_path.name}")
     if not dry_run:
         os.rename(filepath, new_path)
         filepath = new_path
