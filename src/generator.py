@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 from pathlib import Path
 from numpy import dot, linalg
@@ -32,6 +33,7 @@ class Generator:
         return FileType.TITLE
 
     def load_reference(self, csv_path: Path) -> list:
+        logging.info(f"Loading from reference file {csv_path}")
         examples = []
         with open(csv_path, mode='r', encoding='utf-8') as csv_file:
             reader = csv.DictReader(csv_file, delimiter='\t')
@@ -63,6 +65,10 @@ class Generator:
 
         scores.sort(key=lambda x: x[0], reverse=True)
         limit = 2 if filetype == FileType.SEASON else 4
+        got_references = {}
+        for score in scores[:limit]:
+            got_references[score[0]] = {"messy": score[1]["messy"], "clean": score[1]["clean"], "type": score[1]["type"]}
+        logging.debug(f"For filename {filename}, got references {got_references}")
         return [item[1] for item in scores[:limit]]
 
     @staticmethod
