@@ -11,10 +11,10 @@ It can then be run as a script via:
 ./renamey -f "/Absolute/Path/To/Junk/Name"
 ```
 
-Optional parameters include models and verbosity.
+Optional parameters include models, verbosity, and dry run.
 Ex:
 ```bash
-./renamey --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v
+./renamey --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v --dry-run
 ```
 
 ### Overview
@@ -46,7 +46,7 @@ This is the supported naming convention listed by Jellyfin in their docs: <https
 
 ### TODO
 - [x] Add an optional `verbosity` flag.
-- [ ] Add an optional `dry-run` flag with planned execution output.
+- [x] Add an optional `dry-run` flag with planned execution output.
 - [x] Allow passing in different models.
   - This could potentially cause problems, as I'm not sure what other models will output. Once we add `dry-run`, it shouldn't be an issue.
 - [ ] Movie handling is finicky.
