@@ -27,19 +27,19 @@ The data source for RAG is the local database `naming_reference.csv`, which cont
 
 A "messy" show with nested season folders will go from this:
 <pre>
-├── [RUBaDUB] Kaiju No. 8 (2022) (1080p) (Dual Audio) 
+[RUBaDUB] Kaiju No. 8 (2022) (1080p) (Dual Audio) 
     ├── Kaiju No. 8 S1
-        ├── [RUBaDUB][1080p] Kaiju No. 8 - 01 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
-        ├── [RUBaDUB][1080p] Kaiju No. 8 - 02 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
-        └── [RUBaDUB][1080p] Kaiju No. 8 - 03 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
+    │   ├── [RUBaDUB][1080p] Kaiju No. 8 - 01 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
+    │   ├── [RUBaDUB][1080p] Kaiju No. 8 - 02 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
+    │   ├── [RUBaDUB][1080p] Kaiju No. 8 - 03 [BD x265 10bit Dual Audio AC3][3012EC12].mkv
 </pre>
 to this:
 <pre>
-├── Kaiju No. 8 (2022)
+Kaiju No. 8 (2022)
     ├── Season 01
-        ├── Kaiju No. 8 E01.mkv
-        ├── Kaiju No. 8 E02.mkv
-        └── Kaiju No. 8 E03.mkv
+    │   ├── Kaiju No. 8 E01.mkv
+    │   ├── Kaiju No. 8 E02.mkv
+    │   ├── Kaiju No. 8 E03.mkv
 </pre>
 
 This is the supported naming convention listed by Jellyfin in their docs: <https://jellyfin.org/docs/general/server/media/shows/>
