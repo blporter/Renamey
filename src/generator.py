@@ -67,7 +67,9 @@ class Generator:
         limit = 2 if filetype == FileType.SEASON else 4
         got_references = {}
         for score in scores[:limit]:
-            got_references[score[0]] = {"messy": score[1]["messy"], "clean": score[1]["clean"], "type": score[1]["type"]}
+            got_references[score[0]] = {"messy": score[1]["messy"],
+                                        "clean": score[1]["clean"],
+                                        "type": score[1]["type"]}
         logging.debug(f"For filename {filename}, got references {got_references}")
         return [item[1] for item in scores[:limit]]
 
@@ -90,7 +92,7 @@ Use the following patterns and examples as a direct reference for your formattin
         if filetype == FileType.TITLE:
             prompt += (
                 "\nTitles should use the cleaned Title Case title name and are NOT an episode or season. They must NOT include any season indicators."
-                "\nIf a title name has an existing date indicator, the title name MUST include it in parenthesis. Make sure to verify if a date indicator is, in fact, a date indicator and not something else with similar formatting. For example, (720p) and (1080p) are resolution formats, but (1995) and (2020) are dates. If a title has multiple dates in a range, such as (2020-2026), include only the earliest date. NEVER invent or guess a date."
+                "\nIf a title name has an existing date indicator, the title name MUST include it in parenthesis. Make sure to verify if a date indicator is, in fact, a date indicator and not something else with similar formatting. For example, (720p) and (1080p) are resolution formats, but (1995) and (2020) are dates. If a title has multiple dates in a range, such as (2020-2026), include only the earliest date. NEVER invent or guess a date. Any dates shown in the examples that are not in the input are irrelevant."
             )
         prompt += "\nCRITICAL INSTRUCTION: Output ONLY the raw, finalized string of the new filename. Do not provide code blocks, explanations, quotes, notes, or conversational filler."
         return prompt
@@ -123,7 +125,7 @@ Name: {filename}
                                stream=False)
         new_name = response["message"]["content"].strip()
         if "\n" in new_name:
-            raise ValueError(f"Model returned prose instead of a filename: {new_name!r}")
+            raise ValueError(f"model returned prose instead of a filename: {new_name!r}")
         if filetype == FileType.TITLE:
             self.title_name = self.DATE_COMPILE.sub("", new_name).strip()
         return new_name

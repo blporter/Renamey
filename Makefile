@@ -9,7 +9,7 @@ install-models:
 	ollama pull "nomic-embed-text"
 
 run: install-models
-	.venv/bin/python3 src/main.py -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) --dry-run -v
+	.venv/bin/python3 src/main.py -c "$(CONTENT)" -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) --dry-run -v
 
 build:
 	pyinstaller --onedir --paths=src --add-data="naming_reference.csv:." --add-data="ignore_list.json:." --name="renamey" src/main.py

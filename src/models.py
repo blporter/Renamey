@@ -1,4 +1,9 @@
-from enum import Enum, StrEnum
+from enum import StrEnum
+
+
+class ContentType(StrEnum):
+    SHOW = "show"
+    MOVIE = "movie"
 
 
 class FileType(StrEnum):

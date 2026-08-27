@@ -4,24 +4,24 @@ Use local AI models to bulk rename junk files into clean Title Case.
 
 ### Setup
 
-Use `make run FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a Unix Executable.
+Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a Unix Executable.
 
 It can then be run as a script via:
 ```bash
-./renamey -f "/Absolute/Path/To/Junk/Name"
+./renamey -c show -f "/Absolute/Path/To/Junk/Name"
 ```
 
-Optional parameters include models, verbosity, and dry run.
+Content type (movie or show) and filepath are required. Optional parameters include models, verbosity, and dry run.
 Ex:
 ```bash
-./renamey --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v --dry-run
+./renamey --content-type show --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v --dry-run
 ```
 
 ### Overview
 
 The `main.py` script handles traversing for nested folder structures, `parser.py` handles argument parsing and validation, and `generator.py` handles the AI workflow and context references.
 
-The default models used are `gemma4:e4b-mlx` for title name generation and `llama3.1:8b` for season and episode name parsing. For RAG references and context, we use `nomic-embed-text`.
+The default models used are `gemma4:e4b-mlx` for title name generation and `llama3.1:8b` for episode name parsing. For RAG references and context, we use `nomic-embed-text`.
 
 The data source for RAG is the local database `naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts.
 
@@ -48,5 +48,6 @@ This is the supported naming convention listed by Jellyfin in their docs: <https
 - [x] Add an optional `verbosity` flag.
 - [x] Add an optional `dry-run` flag with planned execution output.
 - [x] Allow passing in different models.
-  - This could potentially cause problems, as I'm not sure what other models will output. Once we add `dry-run`, it shouldn't be an issue.
-- [ ] Movie handling is finicky.
+- [x] Fix finicky movie handling.
+- [ ] If a show's title folder doesn't contain a season, add one and move episodes into it.
+  - Pull the season number from episode name, default Season 01.
