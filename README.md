@@ -1,6 +1,6 @@
 # Renamey
 
-Use local AI models to bulk rename junk files into clean Title Case.
+Use local AI models to bulk rename media files with junk names into clean Title Case. The intended use for this program is to automate renaming into the folder structure expected by a Jellyfin media server.
 
 ### Setup
 
@@ -49,5 +49,4 @@ This is the supported naming convention listed by Jellyfin in their docs: <https
 - [x] Add an optional `dry-run` flag with planned execution output.
 - [x] Allow passing in different models.
 - [x] Fix finicky movie handling.
-- [ ] If a show's title folder doesn't contain a season, add one and move episodes into it.
-  - Pull the season number from episode name, default Season 01.
+- [x] If a show's title folder doesn't contain a season, add one and move episodes into it.
