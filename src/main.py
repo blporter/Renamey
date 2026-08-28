@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from pathlib import Path
 from argparse import ArgumentTypeError
 
@@ -12,6 +13,19 @@ from models import FileType, ContentType
 logging.basicConfig(level=logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
+def create_season_folder(filepath: Path):
+    with_season = filepath / (filepath.name + " Season")
+    try:
+        with_season.mkdir(parents=False, exist_ok=True)
+    except FileNotFoundError as e:
+        logging.warning(f"Skipping season directory, problem with structure: {e}")
+        return
+    for file in filepath.iterdir():
+        if file.is_file():
+            target_path = with_season / file.name
+            shutil.move(str(file), str(target_path))
 
 
 def get_new_path(gen: Generator, filepath: Path, filetype: FileType) -> Path:
@@ -64,6 +78,11 @@ def main():
     if not dry_run:
         os.rename(filepath, new_path)
         filepath = new_path
+
+    if content_type == ContentType.SHOW:
+        if not any(file.is_dir() for file in filepath.iterdir()) and not dry_run:
+            print(f"Season folder not found, creating one and moving contents to it")
+            create_season_folder(filepath)
 
     ignore_set = parser.build_ignore_set()
     if filepath.is_dir():
