@@ -15,4 +15,4 @@ build:
 	pyinstaller --onefile --paths=src --add-data="naming_reference.csv:." --add-data="ignore_list.json:." --name="renamey" src/main.py
 
 test:
-	pytest Tests -vs
+	pytest tests -vs
