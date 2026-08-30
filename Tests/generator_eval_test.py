@@ -1,18 +1,24 @@
 import re
 import unittest
-from pathlib import Path
 
-from src.generator import Generator
-from src.models import FileType
+import ollama
+
+from generator import Generator
+from models import FileType
+from resources import resource_path
 
 
-class TestGeneratorMethods(unittest.TestCase):
+class TestGeneratorEval(unittest.TestCase):
     TITLE_MODEL = "gemma4:e4b-mlx"
     EPISODE_MODEL = "llama3.1:8b"
 
     @classmethod
     def setUpClass(cls):
-        cls.generator = Generator(csv_path=Path.cwd().parent / "naming_reference.csv",
+        try:
+            ollama.embeddings(model=Generator.EMBED_MODEL, prompt="ping")
+        except Exception as e:
+            raise unittest.SkipTest(f"Ollama unavailable: {e}")
+        cls.generator = Generator(csv_path=resource_path("naming_reference.csv"),
                                   title_model=cls.TITLE_MODEL,
                                   episode_model=cls.EPISODE_MODEL)
 
@@ -66,10 +72,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "Cike Wu Liuqi.mov",
                           "The Emperor's New Groove (2000).mkv",
                           "Tsue to Tsurugi no Wistoria"]
-        got_names = []
-        for name in filenames:
-            got_names.append(self.generator.get_new_name(name, FileType.TITLE))
-        self.assertEqual(expected_names, got_names)
+        self.assert_sub_test(filenames, expected_names, FileType.TITLE)
 
     def test_get_new_name_returns_expected_seasons(self):
         filenames = [
@@ -89,10 +92,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "Season 01",
                           "Season 05",
                           "Season 06"]
-        got_names = []
-        for name in filenames:
-            got_names.append(self.generator.get_new_name(name, FileType.SEASON))
-        self.assertEqual(expected_names, got_names)
+        self.assert_sub_test(filenames, expected_names, FileType.SEASON)
 
     def test_get_new_name_returns_expected_episodes(self):
         filenames = [
@@ -106,10 +106,7 @@ class TestGeneratorMethods(unittest.TestCase):
                           "E09.mkv",
                           "E10",
                           "E12.png"]
-        got_names = []
-        for name in filenames:
-            got_names.append(self.generator.get_new_name(name, FileType.EPISODE))
-        self.assertEqual(expected_names, got_names)
+        self.assert_sub_test(filenames, expected_names, FileType.EPISODE)
 
     def test_get_new_name_returns_expected_episodes_with_existing_title(self):
         filenames = [
@@ -128,29 +125,31 @@ class TestGeneratorMethods(unittest.TestCase):
                           "Digimon Beatbreak E43.mkv",
                           "Vanitas no Karte E02.mov",
                           "Kaiju No.8 E12.mkv"]
-        got_names = []
-        for i, name in enumerate(filenames):
-            self.generator.title_name = titles[i]
-            got_names.append(self.generator.get_new_name(name, FileType.EPISODE))
-        self.assertEqual(expected_names, got_names)
+        self.assert_sub_test(filenames, expected_names, FileType.EPISODE, titles=titles)
 
     def test_get_new_name_saves_title_and_returns_expected_episodes(self):
         filenames = [
             "[Erai-raws] Tsue to Tsurugi no Wistoria (2025) [720p CR WEB-DL AVC AAC][MultiSub][5FE7D4DD]",
             "[Yameii] Witch Hat Atelier - [English Dub] [CR WEB-DL 1080p H264 AAC] [DC7B989F] (Tongari Boushi no Atelier)",
             "[DB]Vanitas no Karte_2022_-_(Dual Audio_10bit_BD1080p_x265)"]
-        episodes = ["E01.mkv", "Episode 5", "E7.mp4"]
         expected_titles = ["Tsue to Tsurugi no Wistoria",
                            "Witch Hat Atelier",
                            "Vanitas no Karte"]
+        episodes = ["E01.mkv", "Episode 5", "E7.mp4"]
         expected_episodes = ["E01.mkv", "E05", "E07.mp4"]
-        for i, name in enumerate(filenames):
-            self.generator.get_new_name(name, FileType.TITLE)
-            self.assertEqual(expected_titles[i], self.generator.title_name)
-            for j, episode in enumerate(episodes):
-                got_episode = self.generator.get_new_name(episode, FileType.EPISODE)
-                self.assertEqual(f"{expected_titles[i]} {expected_episodes[j]}", got_episode)
 
+        for title_input, expected_title in zip(filenames, expected_titles):
+            with self.subTest(title=title_input):
+                self.generator.get_new_name(title_input, FileType.TITLE)
+                self.assertEqual(expected_title, self.generator.title_name)
+            for episode, expected_episode in zip(episodes, expected_episodes):
+                with self.subTest(title=expected_title, episode=episode):
+                    got = self.generator.get_new_name(episode, FileType.EPISODE)
+                    self.assertEqual(f"{expected_title} {expected_episode}", got)
 
-if __name__ == '__main__':
-    unittest.main()
+    def assert_sub_test(self, filenames: list[str], expected_names: list[str], file_type: FileType, titles=None):
+        for i, (name, expected) in enumerate(zip(filenames, expected_names)):
+            with self.subTest(name=name):
+                if titles is not None:
+                    self.generator.title_name = titles[i]
+                self.assertEqual(expected, self.generator.get_new_name(name, file_type))

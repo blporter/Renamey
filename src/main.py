@@ -9,6 +9,7 @@ import logging
 from generator import Generator
 from parser import FileParser
 from models import FileType, ContentType
+from resources import resource_path
 
 logging.basicConfig(level=logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -71,7 +72,7 @@ def main():
     except ArgumentTypeError as e:
         print(f"Failed to parse arguments: {e}")
         return
-    gen = Generator(Path.cwd() / "naming_reference.csv", title_model, episode_model)
+    gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
 
     new_path = get_new_path(gen, filepath, FileType.TITLE)
     print(f"Title: {filepath.name} --> {new_path.name}")
@@ -84,7 +85,11 @@ def main():
             print(f"Season folder not found, creating one and moving contents to it")
             create_season_folder(filepath)
 
-    ignore_set = parser.build_ignore_set()
+    try:
+        ignore_set = parser.build_ignore_set(resource_path("ignore_list.json"))
+    except (OSError, ValueError, AttributeError, TypeError) as e:
+        logging.warning(f"Could not load ignore list: {e}. Ignoring nothing.")
+        ignore_set = set()
     if filepath.is_dir():
         for file in filepath.iterdir():
             handle_nested_folders(gen, content_type, ignore_set, file, dry_run)

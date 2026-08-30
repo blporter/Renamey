@@ -11,13 +11,12 @@ from models import ContentType
 
 class FileParser:
     @staticmethod
-    def build_ignore_set() -> set:
-        ignore_path = Path.cwd() / "ignore_list.json"
-        with open(ignore_path, "r") as file:
+    def build_ignore_set(ignore_path: Path) -> set:
+        with open(ignore_path, "r", encoding="utf-8") as file:
             config = json.load(file)
-            ignored_files = set(config.get("ignore_files", []))
-            logging.debug(f"Files to be ignored: {ignored_files}")
-            return ignored_files
+        ignored_files = set(config.get("ignore_files", []))
+        logging.debug(f"Files to be ignored: {ignored_files}")
+        return ignored_files
 
     def get_parts_from_args(self) -> tuple[ContentType, Path, str, str, bool]:
         parser = argparse.ArgumentParser(

@@ -1,4 +1,4 @@
-.PHONY: install-models run build
+.PHONY: install-models run build test
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
@@ -13,3 +13,6 @@ run: install-models
 
 build:
 	pyinstaller --onefile --paths=src --add-data="naming_reference.csv:." --add-data="ignore_list.json:." --name="renamey" src/main.py
+
+test:
+	pytest Tests -vs

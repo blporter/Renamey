@@ -50,3 +50,4 @@ This is the supported naming convention listed by Jellyfin in their docs: <https
 - [x] Allow passing in different models.
 - [x] Fix finicky movie handling.
 - [x] If a show's title folder doesn't contain a season, add one and move episodes into it.
+- [x] Work on tests.
