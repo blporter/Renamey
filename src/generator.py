@@ -6,7 +6,7 @@ from numpy import dot, linalg
 
 import ollama
 
-from models import FileType
+from models import FileType, Prompts
 
 
 class Generator:
@@ -16,20 +16,19 @@ class Generator:
     EPISODE_COMPILE = re.compile(r"\bE\d{2,}\b", re.IGNORECASE)
     DATE_COMPILE = re.compile(r"\s*\((?:19|20)\d{2}(?:-(?:19|20)\d{2})?\)\s*$")
 
-    title_name = ""
-
     def __init__(self, csv_path: Path, title_model: str, episode_model: str):
         self.TITLE_MODEL = title_model
         self.EPISODE_MODEL = episode_model
+        self.title_name = ""
         self.examples = self.load_reference(csv_path)
 
     @staticmethod
     def classify(clean_name: str) -> FileType:
         name = clean_name.strip()
-        if Generator.SEASON_COMPILE.match(name):
-            return FileType.SEASON
         if Generator.EPISODE_COMPILE.search(name):
             return FileType.EPISODE
+        if Generator.SEASON_COMPILE.match(name):
+            return FileType.SEASON
         return FileType.TITLE
 
     def load_reference(self, csv_path: Path) -> list:
@@ -38,6 +37,8 @@ class Generator:
         with open(csv_path, mode='r', encoding='utf-8') as csv_file:
             reader = csv.DictReader(csv_file, delimiter='\t')
             for row in reader:
+                if not row['messy_name'].strip():
+                    continue
                 response = ollama.embeddings(model=self.EMBED_MODEL,
                                              prompt=f"search_document: {row['messy_name'].lower()}")
                 examples.append({
@@ -49,8 +50,11 @@ class Generator:
         return examples
 
     @staticmethod
-    def cosine_similarity(v1, v2):
-        return dot(v1, v2) / (linalg.norm(v1) * linalg.norm(v2))
+    def cosine_similarity(v1, v2) -> float:
+        denominator = linalg.norm(v1) * linalg.norm(v2)
+        if denominator == 0:
+            return 0.0
+        return float(dot(v1, v2) / denominator)
 
     def get_useful_references(self, filename: str, filetype: FileType) -> list:
         target_res = ollama.embeddings(model=self.EMBED_MODEL, prompt=f"search_query: {filename.lower()}")
@@ -84,17 +88,14 @@ Use the following patterns and examples as a direct reference for your formattin
 """
         )
         if filetype != FileType.SEASON:
-            prompt += "\nThe extension is the final '.' plus letters at the very end of the input name. Copy it verbatim to the end of the output if and only if it is present in the input. If the input has no extension, the output MUST NOT end in a '.' followed by letters. NEVER invent, change, or guess an extension. Any extension shown in the examples that is not in the input is irrelevant."
+            prompt += Prompts.EXTENSION.value
         if filetype == FileType.EPISODE:
-            prompt += "\nOutput the title name followed by the episode number formatted as 'E' + two digits (E01, E07, E43, E710 for three-plus digit numbers). If the input contains no title name, output only the episode token, e.g. 'Ep9.mkv' -> 'E09.mkv', 'Episode 10' -> 'E10'. Never spell out the word 'Episode' or 'Season' in the output. Discard season numbers, 'Part'/'Batch' markers, release groups, resolutions, codecs, hashes, and date indicators."
+            prompt += Prompts.EPISODE.value
         if filetype == FileType.SEASON:
-            prompt += "\nOutput exactly 'Season NN' where NN is the two-digit season number. Ignore and discard any 'Part' / 'Batch' markers, show titles, release groups, and extensions."
+            prompt += Prompts.SEASON.value
         if filetype == FileType.TITLE:
-            prompt += (
-                "\nTitles should use the cleaned Title Case title name and are NOT an episode or season. They must NOT include any season indicators."
-                "\nIf a title name has an existing date indicator, the title name MUST include it in parenthesis. Make sure to verify if a date indicator is, in fact, a date indicator and not something else with similar formatting. For example, (720p) and (1080p) are resolution formats, but (1995) and (2020) are dates. If a title has multiple dates in a range, such as (2020-2026), include only the earliest date. NEVER invent or guess a date. Any dates shown in the examples that are not in the input are irrelevant."
-            )
-        prompt += "\nCRITICAL INSTRUCTION: Output ONLY the raw, finalized string of the new filename. Do not provide code blocks, explanations, quotes, notes, or conversational filler."
+            prompt += Prompts.TITLE.value
+        prompt += Prompts.CRITICAL.value
         return prompt
 
     def build_prompt(self, filename: str, filetype: FileType) -> str:
