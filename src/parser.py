@@ -18,23 +18,35 @@ class FileParser:
         logging.debug(f"Files to be ignored: {ignored_files}")
         return ignored_files
 
-    def get_parts_from_args(self) -> tuple[ContentType, Path, str, str, bool]:
+    def get_parts_from_args(self) -> tuple[ContentType, Path, str, str, bool] | bool:
         parser = argparse.ArgumentParser(
             description="Process a folder or file's absolute filepath and smart-rename via AI models.")
-        parser.add_argument('-c', '--content-type', type=str,
-                            help="Content type for parsing (show or movie)", required=True)
-        parser.add_argument('-f', '--filepath', type=str,
-                            help="Absolute filepath to a folder", required=True)
+        subparsers = parser.add_subparsers(dest="subcommand", help="Available sub-commands", required=True)
 
-        parser.add_argument('--dry-run', action="store_true",
-                            help="Print changes without renaming", required=False)
-        parser.add_argument('-e', '--episode-model', type=str,
-                            help="Name of model for episode parsing (default=llama3.1:8b)", required=False)
-        parser.add_argument('-t', '--title-model', type=str,
-                            help="Name of model for title parsing (default=gemma4:e4b-mlx)", required=False)
-        parser.add_argument('-v', '--verbose', action="count", default=0,
-                            help="Increase output verbosity (-v or -vv)", required=False)
-        return self.handle_valid_args(parser.parse_args())
+        rename_parser = subparsers.add_parser("rename", help="Rename a file, or all nested files and folders")
+        required_group = rename_parser.add_argument_group("Required arguments")
+        required_group.add_argument('-c', '--content-type', type=str,
+                                    help="Content type for parsing (show or movie)", required=True)
+        required_group.add_argument('-f', '--filepath', type=str,
+                                    help="Absolute filepath to a folder", required=True)
+        optional_group = rename_parser.add_argument_group("Optional arguments")
+        optional_group.add_argument('--dry-run', action="store_true",
+                                    help="Print changes without renaming", required=False)
+        optional_group.add_argument('-e', '--episode-model', type=str,
+                                    help="Name of model for episode parsing (default=llama3.1:8b)", required=False)
+        optional_group.add_argument('-t', '--title-model', type=str,
+                                    help="Name of model for title parsing (default=gemma4:e4b-mlx)", required=False)
+        optional_group.add_argument('-v', '--verbose', action="count", default=0,
+                                    help="Increase output verbosity (-v or -vv)", required=False)
+
+        subparsers.add_parser("undo", help="Undo the last rename operation")
+
+        args = parser.parse_args()
+        print(args)
+        if args.subcommand == "undo":
+            return True
+        else:
+            return self.handle_valid_args(args)
 
     @staticmethod
     def handle_valid_args(args) -> tuple[ContentType, Path, str, str, bool]:
