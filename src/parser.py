@@ -18,10 +18,10 @@ class FileParser:
         logging.debug(f"Files to be ignored: {ignored_files}")
         return ignored_files
 
-    def get_parts_from_args(self) -> tuple[ContentType, Path, str, str, bool] | bool:
-        parser = argparse.ArgumentParser(
+    def get_parts_from_args(self) -> tuple[ContentType, Path, str, str, bool, bool] | bool:
+        arg_parser = argparse.ArgumentParser(
             description="Process a folder or file's absolute filepath and smart-rename via AI models.")
-        subparsers = parser.add_subparsers(dest="subcommand", help="Available sub-commands", required=True)
+        subparsers = arg_parser.add_subparsers(dest="subcommand", help="Available sub-commands", required=True)
 
         rename_parser = subparsers.add_parser("rename", help="Rename a file, or all nested files and folders")
         required_group = rename_parser.add_argument_group("Required arguments")
@@ -29,34 +29,41 @@ class FileParser:
                                     help="Content type for parsing (show or movie)", required=True)
         required_group.add_argument('-f', '--filepath', type=str,
                                     help="Absolute filepath to a folder", required=True)
+
         optional_group = rename_parser.add_argument_group("Optional arguments")
         optional_group.add_argument('--dry-run', action="store_true",
                                     help="Print changes without renaming", required=False)
+        optional_group.add_argument('--resume', action="store_true",
+                                    help="Resume a partial rename operation", required=False)
         optional_group.add_argument('-e', '--episode-model', type=str,
                                     help="Name of model for episode parsing (default=llama3.1:8b)", required=False)
         optional_group.add_argument('-t', '--title-model', type=str,
                                     help="Name of model for title parsing (default=gemma4:e4b-mlx)", required=False)
-        optional_group.add_argument('-v', '--verbose', action="count", default=0,
-                                    help="Increase output verbosity (-v or -vv)", required=False)
 
         subparsers.add_parser("undo", help="Undo the last rename operation")
 
-        args = parser.parse_args()
-        print(args)
+        for name, parser in subparsers.choices.items():
+            parser.add_argument('-v', '--verbose', action="count", default=0,
+                                help="Increase output verbosity (-v or -vv)", required=False)
+
+        args = arg_parser.parse_args()
+        self.handle_logging_level(args)
+        logging.debug(f"Args from parser: {args}")
         if args.subcommand == "undo":
             return True
         else:
             return self.handle_valid_args(args)
 
     @staticmethod
-    def handle_valid_args(args) -> tuple[ContentType, Path, str, str, bool]:
+    def handle_logging_level(args):
         logger = logging.getLogger()
         if args.verbose >= 2:
             logger.setLevel(level=logging.DEBUG)
         elif args.verbose == 1:
             logger.setLevel(level=logging.INFO)
-        logging.debug(f"Args from parser: {args}")
 
+    @staticmethod
+    def handle_valid_args(args) -> tuple[ContentType, Path, str, str, bool, bool]:
         content_arg = args.content_type.lower().strip()
         if content_arg not in ("movie", "show"):
             raise argparse.ArgumentTypeError(f"content type must be either 'movie' or 'show', got {content_arg}")
@@ -73,5 +80,5 @@ class FileParser:
         episode_model = args.episode_model if args.episode_model else "llama3.1:8b"
 
         logging.info(
-            f"Proceeding with content type: {content_type.value}, filepath: {filepath}, title model: {title_model}, episode model: {episode_model}, dry run: {args.dry_run}")
-        return content_type, filepath, title_model, episode_model, args.dry_run
+            f"Proceeding with content type: {content_type.value}, filepath: {filepath}, title model: {title_model}, episode model: {episode_model}, dry run: {args.dry_run}, resume: {args.resume}")
+        return content_type, filepath, title_model, episode_model, args.dry_run, args.resume
