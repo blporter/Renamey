@@ -9,97 +9,142 @@ from manifest import ManifestLogger
 from parser import FileParser
 from models import FileType, ContentType
 from resources import resource_path
+from undoer import Undoer
 
 logging.basicConfig(level=logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
-def create_season_folder(mani: ManifestLogger, filepath: Path, season_name: str):
-    mani.log_mkdir(filepath / season_name)
-    logging.info(f"Created season folder at {filepath / season_name}")
-    for file in filepath.iterdir():
-        if file.is_file():
-            target_path = filepath / season_name / file.name
-            mani.log_move(file, target_path)
-            logging.debug(f"Moved {file.name} to {target_path.name}")
+class Renamey:
+    gen: Generator
+    mani: ManifestLogger
+    ignore_set: set[str]
+    content_type: ContentType
+    filepath: Path
+    dry_run: bool
 
+    def __init__(self, args, ignore_set: set[str]):
+        self.ignore_set = ignore_set
+        self.content_type, self.filepath, title_model, episode_model, self.dry_run, self.resume = args
+        self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
 
-def get_new_path(gen: Generator, filepath: Path, filetype: FileType) -> Path:
-    cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
-    logging.debug(f"File name after cleaning: {cleaned_path_name}")
-    try:
-        new_name = gen.get_new_name(cleaned_path_name, filetype)
-    except ValueError as e:
-        logging.warning(f"Failed to generate new name for {filepath.name}: {e}")
-        new_name = filepath.name
-    return filepath.parent / new_name
+    @staticmethod
+    def perform_undo():
+        try:
+            undoer = Undoer()
+            undoer.undo_manifest()
+            ManifestLogger.pretty_print(undoer.manifest, reverse=True)
+        except (ValueError, KeyError, Exception) as e:
+            logging.critical(f"Failed to undo: {e}")
 
+    def run(self):
+        try:
+            self.mani = ManifestLogger(self.content_type, self.filepath, self.dry_run, self.resume)
+        except Exception as e:
+            logging.critical(f"Failed to create manifest: {e}")
+            return
+        self.perform_rename()
 
-def handle_nested_folders(gen: Generator, mani: ManifestLogger, content_type: ContentType, ignore_set: set,
-                          filepath: Path, dry_run):
-    if filepath.name in ignore_set:
-        logging.debug(f"Skipping ignored file: {filepath.name}")
-        return
-    if content_type == ContentType.SHOW:
-        if filepath.is_dir():
-            folder_path = get_new_path(gen, filepath, FileType.SEASON)
-            print(f"\t├── Season: {filepath.name} --> {folder_path.name}")
-            if not dry_run:
-                mani.log_move(filepath, folder_path)
-                filepath = folder_path
-            for file in filepath.iterdir():
-                handle_nested_folders(gen, mani, content_type, ignore_set, file, dry_run)
-        else:
-            new_file = get_new_path(gen, filepath, FileType.EPISODE)
-            print(f"\t│\t├── Episode: {filepath.name} --> {new_file.name}")
-            if not dry_run:
-                mani.log_move(filepath, new_file)
-    if content_type == ContentType.MOVIE:
-        new_file = get_new_path(gen, filepath, FileType.TITLE)
-        print(f"\t├── Movie: {filepath.name} --> {new_file.name}")
-        if not dry_run:
-            mani.log_move(filepath, new_file)
+    def perform_rename(self):
+        original_name = self.filepath.name
+        new_path = self.get_new_path(self.filepath, FileType.TITLE)
+        self.mani.log_move(self.filepath, new_path, FileType.TITLE)
+        logical_path = new_path
+        if not self.dry_run:
+            self.filepath = new_path
+
+        should_skip_nested = self.handle_season_with_no_folder(self.filepath, logical_path, original_name)
+
+        if not should_skip_nested and self.filepath.is_dir():
+            for file in self.filepath.iterdir():
+                child_path = logical_path / file.name
+                self.handle_nested_folders(file, child_path)
+
+        self.mani.log_complete()
+        ManifestLogger.pretty_print(self.mani.manifest)
+
+    def handle_season_with_no_folder(self, filepath: Path, logical_path: Path, original_name: str) -> bool:
+        if self.content_type == ContentType.SHOW:
+            if not any(file.is_dir() for file in filepath.iterdir()):
+                season_name = original_name + " (New Dir)"
+                season_path = logical_path / season_name
+                loose_files = [file for file in filepath.iterdir() if file.is_file()]
+                self.mani.log_mkdir(season_path, filetype=FileType.SEASON)
+                self.move_episodes_into_season(filepath, logical_path, season_name)
+
+                new_season = self.get_new_path(season_path, FileType.SEASON)
+                self.mani.log_move(season_path, new_season, FileType.SEASON)
+
+                for file in loose_files:
+                    if file.name not in self.ignore_set:
+                        episode_logical_path = new_season / file.name
+                        new_episode = self.get_new_path(episode_logical_path, FileType.EPISODE)
+                        self.mani.log_move(episode_logical_path, new_episode, FileType.EPISODE)
+                return True
+        return False
+
+    def move_episodes_into_season(self, filepath: Path, logical_path: Path, season_name: str):
+        logging.info(f"Moving all episodes into new season folder {season_name}")
+        for file in filepath.iterdir():
+            if file.is_file():
+                target_path = logical_path / season_name / file.name
+                self.mani.log_move(logical_path / file.name, target_path, filetype=FileType.EPISODE)
+                logging.debug(f"Moved {file.name} to {target_path.name}")
+
+    def get_new_path(self, filepath: Path, filetype: FileType) -> Path:
+        cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
+        logging.debug(f"File name after cleaning: {cleaned_path_name}")
+        try:
+            new_name = self.gen.get_new_name(cleaned_path_name, filetype)
+        except ValueError as e:
+            logging.error(f"Failed to generate new name for {filepath.name}: {e}")
+            new_name = filepath.name
+        return filepath.parent / new_name
+
+    def handle_nested_folders(self, filepath: Path, logical_path: Path):
+        if filepath.name in self.ignore_set:
+            logging.debug(f"Skipping ignored file: {filepath.name}")
+            return
+
+        if self.content_type == ContentType.SHOW:
+            if filepath.is_dir():
+                new_logical_path = self.get_new_path(logical_path, FileType.SEASON)
+                self.mani.log_move(logical_path, new_logical_path, FileType.SEASON)
+                if not self.dry_run:
+                    filepath = new_logical_path
+                for file in filepath.iterdir():
+                    child_path = new_logical_path / file.name
+                    self.handle_nested_folders(file, child_path)
+            else:
+                new_file = self.get_new_path(logical_path, FileType.EPISODE)
+                self.mani.log_move(logical_path, new_file, FileType.EPISODE)
+
+        if self.content_type == ContentType.MOVIE:
+            new_file = self.get_new_path(logical_path, FileType.MOVIE)
+            self.mani.log_move(logical_path, new_file, FileType.MOVIE)
 
 
 def main():
     parser = FileParser()
     try:
         args = parser.get_parts_from_args()
-        if isinstance(args, bool):
-            # TODO
-            print("undo prior changes")
-            return
-        else:
-            content_type, filepath, title_model, episode_model, dry_run = args
     except ArgumentTypeError as e:
-        print(f"Failed to parse arguments: {e}")
+        logging.critical(f"Failed to parse arguments: {e}")
         return
-    gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
-    mani = ManifestLogger(content_type, filepath, dry_run)
 
-    if content_type == ContentType.SHOW:
-        if not any(file.is_dir() for file in filepath.iterdir()) and not dry_run:
-            print(f"Season folder not found, creating one and moving contents to it")
-            season_folder = get_new_path(gen, filepath, FileType.SEASON)
-            create_season_folder(mani, filepath, season_folder.name)
-
-    new_path = get_new_path(gen, filepath, FileType.TITLE)
-    print(f"Title: {filepath.name} --> {new_path.name}")
-    if not dry_run:
-        mani.log_move(filepath, new_path)
-        filepath = new_path
+    if isinstance(args, bool) and args:
+        Renamey.perform_undo()
+        return
 
     try:
         ignore_set = parser.build_ignore_set(resource_path("ignore_list.json"))
     except (OSError, ValueError, AttributeError, TypeError) as e:
         logging.warning(f"Could not load ignore list: {e}. Ignoring nothing.")
         ignore_set = set()
-    if filepath.is_dir():
-        for file in filepath.iterdir():
-            handle_nested_folders(gen, mani, content_type, ignore_set, file, dry_run)
-    if not dry_run:
-        mani.log_complete()
+
+    renamey = Renamey(args, ignore_set)
+    renamey.run()
 
 
 if __name__ == '__main__':
