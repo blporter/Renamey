@@ -93,7 +93,7 @@ Use the following patterns and examples as a direct reference for your formattin
             prompt += Prompts.EPISODE.value
         if filetype == FileType.SEASON:
             prompt += Prompts.SEASON.value
-        if filetype == FileType.TITLE:
+        if filetype in (FileType.TITLE, FileType.MOVIE):
             prompt += Prompts.TITLE.value
         prompt += Prompts.CRITICAL.value
         return prompt
@@ -117,7 +117,7 @@ Name: {filename}
         for idx, match in enumerate(matches):
             context += f"Example {idx + 1}:\n- Messy Name: {match['messy']}\n- Target Cleaned Name: {match['clean']}\n\n"
 
-        model_name = self.TITLE_MODEL if filetype == FileType.TITLE else self.EPISODE_MODEL
+        model_name = self.TITLE_MODEL if filetype in (FileType.TITLE, FileType.MOVIE) else self.EPISODE_MODEL
         response = ollama.chat(model=model_name,
                                messages=[{"role": "system", "content": self.build_system_prompt(context, filetype)},
                                          {"role": "user",
@@ -127,6 +127,6 @@ Name: {filename}
         new_name = response["message"]["content"].strip()
         if "\n" in new_name:
             raise ValueError(f"model returned prose instead of a filename: {new_name!r}")
-        if filetype == FileType.TITLE:
+        if filetype in (FileType.TITLE, FileType.MOVIE):
             self.title_name = self.DATE_COMPILE.sub("", new_name).strip()
         return new_name

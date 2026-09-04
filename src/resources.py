@@ -11,3 +11,6 @@ def resource_dir() -> Path:
 
 def resource_path(name: str) -> Path:
     return resource_dir() / name
+
+def default_manifest_path() -> Path:
+    return Path.home() / ".cache/renamey" / "manifest.json"
