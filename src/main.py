@@ -1,5 +1,7 @@
 import re
 import logging
+import multiprocessing
+
 import ollama
 
 from pathlib import Path
@@ -185,5 +187,6 @@ def main():
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     with logging_redirect_tqdm():
         main()

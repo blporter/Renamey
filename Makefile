@@ -15,7 +15,7 @@ undo:
 	.venv/bin/python3 src/main.py undo
 
 build:
-	pyinstaller --onefile --paths=src --add-data="naming_reference.csv:." --add-data="ignore_list.json:." --name="renamey" src/main.py
+	pyinstaller renamey.spec
 
 test:
 	pytest tests -vs
