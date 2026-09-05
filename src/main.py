@@ -1,10 +1,11 @@
 import re
+import logging
+import ollama
+
 from pathlib import Path
 from argparse import ArgumentTypeError
-
-import logging
-
-import ollama
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from errors import ManifestAlreadyInProgress
 from generator import Generator
@@ -31,6 +32,9 @@ class Renamey:
         self.ignore_set = ignore_set
         self.content_type, self.filepath, title_model, episode_model, self.dry_run, self.resume = args
         self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
+        file_count = sum(1 for _ in self.filepath.rglob('*'))
+        custom_format = '{l_bar}{bar:60}{r_bar}'
+        self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format=custom_format, ascii="░█")
 
     @staticmethod
     def perform_undo():
@@ -82,6 +86,8 @@ class Renamey:
                 self.handle_nested_folders(file, child_path)
 
         self.mani.log_complete()
+        self.pbar.update(self.pbar.total - self.pbar.n)
+        self.pbar.close()
         ManifestLogger.pretty_print(self.mani.manifest)
 
     def handle_season_with_no_folder(self, filepath: Path, logical_path: Path, original_name: str) -> bool:
@@ -117,6 +123,7 @@ class Renamey:
         if key in self.mani.completed_moves:
             logging.debug(f"Skipping already completed move: {key}")
             return Path(self.mani.completed_moves[key])
+        self.pbar.update(1)
         cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
         logging.debug(f"File name after cleaning: {cleaned_path_name}")
         try:
@@ -178,4 +185,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with logging_redirect_tqdm():
+        main()

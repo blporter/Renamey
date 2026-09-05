@@ -1,9 +1,10 @@
 import json
 import shutil
+import logging
+
 from datetime import datetime
 from pathlib import Path
-
-import logging
+from tqdm import tqdm
 
 from resources import default_manifest_path, open_existing_manifest
 from models import ContentType, ManifestStatus, ManifestOperation, FileType
@@ -190,11 +191,11 @@ class ManifestLogger:
             output = f"{label}: {entry['from']} --> {entry['to']}"
 
             if entry["depth"] == 0:
-                print(output)
+                tqdm.write(output)
             elif entry["depth"] == 1:
                 icon = "└" if entry["is_last"] else "├"
-                print(f"\t{icon}── {output}")
+                tqdm.write(f"\t{icon}── {output}")
             elif entry["depth"] == 2:
                 icon = "└" if entry["is_last"] else "├"
                 vert = "│" if entry["parent_continues"] else " "
-                print(f"\t{vert}\t{icon}── {output}")
+                tqdm.write(f"\t{vert}\t{icon}── {output}")

@@ -1,6 +1,8 @@
 import logging
 import shutil
+
 from pathlib import Path
+from tqdm import tqdm
 
 from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty
 from resources import default_manifest_path, open_existing_manifest
@@ -30,7 +32,7 @@ class Undoer:
             self.perform_undo(operation)
 
         Path(self.manifest_path).unlink(missing_ok=True)
-        print("Finished undoing operations, manifest deleted.")
+        tqdm.write("Finished undoing operations, manifest deleted.")
 
     def undo_last_operation(self):
         if not self.manifest["operations"]:
