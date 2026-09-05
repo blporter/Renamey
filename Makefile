@@ -1,7 +1,9 @@
-.PHONY: install-models run undo build test
+.PHONY: install-models run undo build test install uninstall
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
+
+BUILD_OUTPUT := dist/renamey/renamey
 
 install-models:
 	ollama pull $(TITLE_MODEL)
@@ -14,8 +16,16 @@ run:
 undo:
 	.venv/bin/python3 src/main.py undo
 
-build:
-	pyinstaller renamey.spec
+build: $(BUILD_OUTPUT)
+
+$(BUILD_OUTPUT): renamey.spec $(wildcard src/*.py) naming_reference.csv ignore_list.json
+	.venv/bin/pyinstaller renamey.spec
+
+install: $(BUILD_OUTPUT)
+	./install.sh
+
+uninstall:
+	./install.sh uninstall
 
 test:
 	pytest tests -vs
