@@ -5,7 +5,7 @@ from pathlib import Path
 
 import logging
 
-from resources import default_manifest_path
+from resources import default_manifest_path, open_existing_manifest
 from models import ContentType, ManifestStatus, ManifestOperation, FileType
 
 
@@ -17,34 +17,33 @@ class ManifestLogger:
         FileType.MOVIE.value: 1
     }
 
-    def __init__(self, content_type: ContentType, original_path: Path, dry_run: bool, resume: bool,
+    def __init__(self, content_type: ContentType, original_path: Path, dry_run: bool,
                  manifest_path: Path = default_manifest_path()):
         self.manifest_path = manifest_path.resolve()
         if not self.manifest_path.parent.exists():
             self.manifest_path.parent.mkdir(parents=True, exist_ok=True)
         self.dry_run = dry_run
+        self.completed_moves = {}
 
-        existing_manifest = self.open_existing_manifest(self.manifest_path)
+        existing_manifest = open_existing_manifest(self.manifest_path)
         if existing_manifest and existing_manifest["status"] == ManifestStatus.IN_PROGRESS.value:
-            if resume:
-                logging.critical("Resume not implemented yet.")
-            raise Exception(
-                f"manifest already in progress. Resume with `--partial`, use `undo` subcommand to revert it, or delete it from {self.manifest_path}")
-        self.manifest = self.create_manifest(content_type, original_path)
-        if not self.dry_run:
-            self.dump_manifest_to_file()
-            logging.debug(f"Created manifest at {self.manifest_path}")
+            self.manifest = existing_manifest
+            if not self.dry_run:
+                self.dump_manifest_to_file()
+            self.build_existing_operations()
+            logging.debug(f"Resuming manifest with {len(existing_manifest['operations'])} prior operations")
+        else:
+            self.manifest = self.create_manifest(content_type, original_path)
+            if not self.dry_run:
+                self.dump_manifest_to_file()
+                logging.debug(f"Created manifest at {self.manifest_path}")
 
-    @staticmethod
-    def open_existing_manifest(manifest_path) -> dict | None:
-        if not manifest_path.exists():
-            return None
-        with open(manifest_path, "r", encoding="utf-8") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                logging.warning(f"Corrupted manifest file {manifest_path}")
-                return None
+    def build_existing_operations(self):
+        for op in self.manifest["operations"]:
+            if op["status"] == ManifestStatus.COMPLETE.value:
+                if op["op_type"] == ManifestOperation.MOVE.value:
+                    self.completed_moves[op["from"]] = op["to"]
+                    self.completed_moves[op["to"]] = op["to"]
 
     def dump_manifest_to_file(self):
         if not self.dry_run:
@@ -70,8 +69,12 @@ class ManifestLogger:
             "from": str(from_path),
             "to": str(to_path),
             "filetype": filetype.value,
-            "status": ManifestStatus.IN_PROGRESS.value
+            "status": ManifestStatus.COMPLETE.value
         }
+        if operation in self.manifest["operations"]:
+            logging.debug(f"Skipping move operation for {from_path} --> {to_path}, already in manifest")
+            return
+        operation["status"] = ManifestStatus.IN_PROGRESS.value
         self.manifest["operations"].append(operation)
         self.dump_manifest_to_file()
         if not self.dry_run:
@@ -86,8 +89,12 @@ class ManifestLogger:
             "op_type": ManifestOperation.MKDIR.value,
             "path": str(path),
             "filetype": filetype.value,
-            "status": ManifestStatus.IN_PROGRESS.value
+            "status": ManifestStatus.COMPLETE.value
         }
+        if operation in self.manifest["operations"]:
+            logging.debug(f"Skipping mkdir operation for {path}, already in manifest")
+            return
+        operation["status"] = ManifestStatus.IN_PROGRESS.value
         self.manifest["operations"].append(operation)
         self.dump_manifest_to_file()
 
@@ -121,7 +128,9 @@ class ManifestLogger:
 
         skip_indices = ManifestLogger.find_skip_indices(operations, created_dirs)
         moves = [op for i, op in enumerate(operations)
-                 if i not in skip_indices and op["op_type"] == ManifestOperation.MOVE.value]
+                 if i not in skip_indices
+                 and op["op_type"] == ManifestOperation.MOVE.value
+                 and Path(op["from"]).name != Path(op["to"]).name]
 
         entries = []
         for op in moves:

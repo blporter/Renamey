@@ -9,7 +9,7 @@ install-models:
 	ollama pull "nomic-embed-text"
 
 run:
-	.venv/bin/python3 src/main.py rename -c "$(CONTENT)" -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) --dry-run -v
+	.venv/bin/python3 src/main.py rename -c "$(CONTENT)" -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) --dry-run -v --resume
 
 undo:
 	.venv/bin/python3 src/main.py undo

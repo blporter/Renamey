@@ -4,11 +4,14 @@ from argparse import ArgumentTypeError
 
 import logging
 
+import ollama
+
+from errors import ManifestAlreadyInProgress
 from generator import Generator
 from manifest import ManifestLogger
 from parser import FileParser
-from models import FileType, ContentType
-from resources import resource_path
+from models import FileType, ContentType, ManifestStatus, ManifestOperation
+from resources import resource_path, default_manifest_path, open_existing_manifest
 from undoer import Undoer
 
 logging.basicConfig(level=logging.WARNING)
@@ -39,11 +42,28 @@ class Renamey:
             logging.critical(f"Failed to undo: {e}")
 
     def run(self):
+        existing_manifest = open_existing_manifest(default_manifest_path())
+        if existing_manifest and existing_manifest["status"] == ManifestStatus.IN_PROGRESS.value:
+            if self.resume:
+                if existing_manifest["operations"][-1]["status"] == ManifestStatus.IN_PROGRESS.value:
+                    if not self.dry_run:
+                        undoer = Undoer.from_manifest(existing_manifest)
+                        undoer.undo_last_operation()
+                    else:
+                        existing_manifest["operations"].pop()
+            else:
+                raise ManifestAlreadyInProgress(str(default_manifest_path()))
         try:
-            self.mani = ManifestLogger(self.content_type, self.filepath, self.dry_run, self.resume)
+            self.mani = ManifestLogger(self.content_type, self.filepath, self.dry_run)
         except Exception as e:
             logging.critical(f"Failed to create manifest: {e}")
             return
+
+        if self.resume and self.mani.manifest["operations"]:
+            first_op = self.mani.manifest["operations"][0]
+            if first_op["op_type"] == ManifestOperation.MOVE.value and first_op["filetype"] == FileType.TITLE.value and \
+                    first_op["status"] == ManifestStatus.COMPLETE.value:
+                self.gen.title_name = Generator.DATE_COMPILE.sub("", self.filepath.name).strip()
         self.perform_rename()
 
     def perform_rename(self):
@@ -93,6 +113,10 @@ class Renamey:
                 logging.debug(f"Moved {file.name} to {target_path.name}")
 
     def get_new_path(self, filepath: Path, filetype: FileType) -> Path:
+        key = str(filepath)
+        if key in self.mani.completed_moves:
+            logging.debug(f"Skipping already completed move: {key}")
+            return Path(self.mani.completed_moves[key])
         cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
         logging.debug(f"File name after cleaning: {cleaned_path_name}")
         try:
@@ -126,6 +150,12 @@ class Renamey:
 
 
 def main():
+    try:
+        ollama.list()
+    except Exception as e:
+        logging.critical(f"Ollama unavailable: {e}")
+        return
+
     parser = FileParser()
     try:
         args = parser.get_parts_from_args()

@@ -2,41 +2,56 @@ import logging
 import shutil
 from pathlib import Path
 
-from resources import default_manifest_path
-from manifest import ManifestLogger
+from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty
+from resources import default_manifest_path, open_existing_manifest
 from models import ManifestOperation
 
 
 class Undoer:
     def __init__(self, manifest_path: Path = default_manifest_path()):
         self.manifest_path = manifest_path.resolve()
-        existing_manifest = ManifestLogger.open_existing_manifest(self.manifest_path)
+        existing_manifest = open_existing_manifest(self.manifest_path)
         if not existing_manifest:
             raise ValueError(f"no valid manifest found at {self.manifest_path}")
         self.manifest = existing_manifest
+
+    @classmethod
+    def from_manifest(cls, manifest: dict):
+        instance = object.__new__(cls)
+        instance.manifest = manifest
+        instance.manifest_path = None
+        return instance
 
     def undo_manifest(self):
         if not self.manifest["operations"]:
             raise Exception("no operations to undo")
         for operation in reversed(self.manifest["operations"]):
-            if operation["op_type"] == ManifestOperation.MOVE.value:
-                try:
-                    self.undo_move(operation)
-                except KeyError:
-                    raise KeyError(
-                        f"manifest is missing required fields for {ManifestOperation.MOVE.value} operation: {operation}")
-
-            if operation["op_type"] == ManifestOperation.MKDIR.value:
-                try:
-                    self.undo_mkdir(operation)
-                except KeyError:
-                    raise KeyError(
-                        f"manifest is missing required field for {ManifestOperation.MKDIR.value} operation: {operation}")
-                except Exception as e:
-                    raise Exception(f"failed to undo mkdir operation: {e}")
+            self.perform_undo(operation)
 
         Path(self.manifest_path).unlink(missing_ok=True)
         print("Finished undoing operations, manifest deleted.")
+
+    def undo_last_operation(self):
+        if not self.manifest["operations"]:
+            raise Exception("no operations to undo")
+        operation = self.manifest["operations"].pop()
+        logging.debug(f"Undoing last operation: {operation}")
+        self.perform_undo(operation)
+
+    def perform_undo(self, operation):
+        if operation["op_type"] == ManifestOperation.MOVE.value:
+            try:
+                self.undo_move(operation)
+            except KeyError:
+                raise InvalidKeys(operation)
+
+        if operation["op_type"] == ManifestOperation.MKDIR.value:
+            try:
+                self.undo_mkdir(operation)
+            except KeyError:
+                raise InvalidKeys(operation)
+            except Exception as e:
+                raise UndoError(f"failed to undo mkdir operation: {e}")
 
     @staticmethod
     def undo_move(operation: dict):
@@ -49,8 +64,8 @@ class Undoer:
     def undo_mkdir(operation: dict):
         path = Path(operation["path"])
         if not path.is_dir():
-            raise Exception(f"{path} is not a directory")
+            raise PathNotDir(f"{path} is not a directory")
         if any(path.iterdir()):
-            raise Exception(f"{path} is not empty")
+            raise DirNotEmpty(f"{path} is not empty")
         path.rmdir()
         logging.debug(f"{path.name} --> Reverted directory creation")
