@@ -23,9 +23,14 @@ An interrupted run can be resumed by passing the `--resume` flag. This will skip
 ./renamey rename --content-type show --filepath "/Absolute/Path/To/Junk/Name" --resume --dry-run -v
 ```
 
-Alternatively, it can be run to undo the previous rename operation by using the `undo` subcommand instead of `rename`. Undo has no other flags except optional verbosity (-v or -vv).
+Undo the previous rename operation by using the `undo` subcommand instead of `rename`. Undo has no other flags except optional verbosity (-v or -vv).
 ```bash
 ./renamey undo -v
+```
+
+Modify the default models by running `renamey config` and providing the model names. Running `renamey rename` will use the new models by default. Both `title_model` and `episode_model` are optional.
+```bash
+./renamey config --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b"
 ```
 
 ### Overview
