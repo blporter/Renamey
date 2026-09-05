@@ -1,9 +1,6 @@
 import re
 import logging
 import threading
-import multiprocessing
-
-import ollama
 
 from pathlib import Path
 from argparse import ArgumentTypeError
@@ -38,8 +35,8 @@ class Renamey:
         self.content_type, self.filepath, title_model, episode_model, self.dry_run, self.resume = args
         self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
         file_count = sum(1 for _ in self.filepath.rglob('*'))
-        custom_format = '{l_bar}{bar:60}{r_bar}'
-        self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format=custom_format, ascii="░█")
+        self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format="{l_bar}{bar:60}{r_bar}",
+                         ascii="░█")
 
     @staticmethod
     def perform_undo():
@@ -107,7 +104,6 @@ class Renamey:
                 new_season = self.get_new_path(season_path, FileType.SEASON)
                 self.mani.log_move(season_path, new_season, FileType.SEASON)
                 self.pbar.total += 1
-                self.pbar.refresh()
 
                 for file in loose_files:
                     if file.name not in self.ignore_set:
@@ -130,6 +126,8 @@ class Renamey:
         if key in self.mani.completed_moves:
             logging.debug(f"Skipping already completed move: {key}")
             return Path(self.mani.completed_moves[key])
+        if self.pbar.n == self.pbar.total:
+            self.pbar.total += 1
         self.pbar.update(1)
         cleaned_path_name = re.sub(r'[<>:\"/\\|?*]', '', filepath.name)
         logging.debug(f"File name after cleaning: {cleaned_path_name}")
@@ -164,12 +162,6 @@ class Renamey:
 
 
 def main():
-    try:
-        ollama.list()
-    except Exception as e:
-        logging.critical(f"Ollama unavailable: {e}")
-        return
-
     parser = FileParser()
     try:
         args = parser.get_parts_from_args()
@@ -187,11 +179,17 @@ def main():
         logging.warning(f"Could not load ignore list: {e}. Ignoring nothing.")
         ignore_set = set()
 
+    import ollama
+    try:
+        ollama.list()
+    except Exception as e:
+        logging.critical(f"Ollama unavailable: {e}")
+        return
+
     renamey = Renamey(args, ignore_set)
     renamey.run()
 
 
 if __name__ == '__main__':
-    multiprocessing.freeze_support()
     with logging_redirect_tqdm():
         main()
