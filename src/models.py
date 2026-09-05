@@ -1,4 +1,6 @@
 from enum import StrEnum
+from pathlib import Path
+from dataclasses import dataclass
 
 
 class ContentType(StrEnum):
@@ -11,6 +13,27 @@ class FileType(StrEnum):
     SEASON = "season"
     EPISODE = "episode"
     MOVIE = "movie"
+
+
+@dataclass
+class RenameArguments:
+    content_type: ContentType
+    filepath: Path
+    title_model: str
+    episode_model: str
+    dry_run: bool
+    resume: bool
+
+
+@dataclass
+class ConfigArguments:
+    has_updated_config: bool
+
+
+@dataclass
+class UndoArguments:
+    should_undo: bool
+
 
 class Prompts(StrEnum):
     EXTENSION = "\nThe extension is the final '.' plus letters at the very end of the input name. Copy it verbatim to the end of the output if and only if it is present in the input. If the input has no extension, the output MUST NOT end in a '.' followed by letters. NEVER invent, change, or guess an extension. Any extension shown in the examples that is not in the input is irrelevant."

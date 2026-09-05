@@ -13,7 +13,7 @@ from errors import ManifestAlreadyInProgress
 from generator import Generator
 from manifest import ManifestLogger
 from parser import FileParser
-from models import FileType, ContentType, ManifestStatus, ManifestOperation
+from models import FileType, ContentType, ManifestStatus, ManifestOperation, ConfigArguments, UndoArguments
 from resources import resource_path, default_manifest_path, open_existing_manifest
 from undoer import Undoer
 
@@ -32,7 +32,13 @@ class Renamey:
 
     def __init__(self, args, ignore_set: set[str]):
         self.ignore_set = ignore_set
-        self.content_type, self.filepath, title_model, episode_model, self.dry_run, self.resume = args
+        self.content_type = args.content_type
+        self.filepath = args.filepath
+        title_model = args.title_model
+        episode_model = args.episode_model
+        self.dry_run = args.dry_run
+        self.resume = args.resume
+
         self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
         file_count = sum(1 for _ in self.filepath.rglob('*'))
         self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format="{l_bar}{bar:60}{r_bar}",
@@ -169,8 +175,12 @@ def main():
         logging.critical(f"Failed to parse arguments: {e}")
         return
 
-    if isinstance(args, bool) and args:
+    if isinstance(args, UndoArguments) and args.should_undo:
         Renamey.perform_undo()
+        return
+
+    if isinstance(args, ConfigArguments) and args.has_updated_config:
+        tqdm.write("Models configured successfully.")
         return
 
     try:
