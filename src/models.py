@@ -10,7 +10,7 @@ class FileType(StrEnum):
     TITLE = "title"
     SEASON = "season"
     EPISODE = "episode"
-
+    MOVIE = "movie"
 
 class Prompts(StrEnum):
     EXTENSION = "\nThe extension is the final '.' plus letters at the very end of the input name. Copy it verbatim to the end of the output if and only if it is present in the input. If the input has no extension, the output MUST NOT end in a '.' followed by letters. NEVER invent, change, or guess an extension. Any extension shown in the examples that is not in the input is irrelevant."
@@ -21,3 +21,14 @@ class Prompts(StrEnum):
         "\nIf a title name has an existing date indicator, the title name MUST include it in parenthesis. Make sure to verify if a date indicator is, in fact, a date indicator and not something else with similar formatting. For example, (720p) and (1080p) are resolution formats, but (1995) and (2020) are dates. If a title has multiple dates in a range, such as (2020-2026), include only the earliest date. NEVER invent or guess a date. Any dates shown in the examples that are not in the input are irrelevant."
     )
     CRITICAL = "\nCRITICAL INSTRUCTION: Output ONLY the raw, finalized string of the new filename. Do not provide code blocks, explanations, quotes, notes, or conversational filler."
+
+
+class ManifestStatus(StrEnum):
+    IN_PROGRESS = "in_progress"
+    COMPLETE = "complete"
+    FAILED = "failed"
+
+
+class ManifestOperation(StrEnum):
+    MOVE = "move"
+    MKDIR = "mkdir"
