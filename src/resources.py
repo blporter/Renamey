@@ -19,13 +19,18 @@ def resource_path(name: str) -> Path:
 def default_manifest_path() -> Path:
     return Path.home() / ".cache/renamey" / "manifest.json"
 
+def default_embeddings_path() -> Path:
+    return Path.home() / ".cache/renamey" / "embeddings.sqlite"
 
-def open_existing_manifest(manifest_path: Path = default_manifest_path()) -> dict | None:
-    if not manifest_path.exists():
+
+def open_existing_manifest(manifest_path: Path = None) -> dict | None:
+    path = manifest_path or default_manifest_path()
+    path = path.resolve()
+    if not path.exists():
         return None
-    with open(manifest_path, "r", encoding="utf-8") as file:
+    with open(path, "r", encoding="utf-8") as file:
         try:
             return json.load(file)
         except json.JSONDecodeError:
-            logging.warning(f"Corrupted manifest file {manifest_path}")
+            logging.warning(f"Corrupted manifest file {path}")
             return None

@@ -8,8 +8,9 @@ from models import ManifestOperation
 
 
 class Undoer:
-    def __init__(self, manifest_path: Path = default_manifest_path()):
-        self.manifest_path = manifest_path.resolve()
+    def __init__(self, manifest_path: Path = None):
+        path = manifest_path or default_manifest_path()
+        self.manifest_path = path.resolve()
         existing_manifest = open_existing_manifest(self.manifest_path)
         if not existing_manifest:
             raise ValueError(f"no valid manifest found at {self.manifest_path}")

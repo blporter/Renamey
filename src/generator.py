@@ -2,12 +2,15 @@ import csv
 import logging
 import re
 from pathlib import Path
-from numpy import dot, linalg
+import sqlite3
+import hashlib
 
+import numpy as np
 import ollama
 
 from errors import ModelReturnedProse
 from models import FileType, Prompts
+from resources import default_embeddings_path
 
 
 class Generator:
@@ -17,11 +20,17 @@ class Generator:
     EPISODE_COMPILE = re.compile(r"\bE\d{2,}\b", re.IGNORECASE)
     DATE_COMPILE = re.compile(r"\s*\((?:19|20)\d{2}(?:-(?:19|20)\d{2})?\)\s*$")
 
-    def __init__(self, csv_path: Path, title_model: str, episode_model: str):
+    def __init__(self, csv_path: Path, title_model: str, episode_model: str,
+                 cache_path: Path = None):
         self.TITLE_MODEL = title_model
         self.EPISODE_MODEL = episode_model
         self.title_name = ""
+        self.cache_path = cache_path or default_embeddings_path()
         self.examples = self.load_reference(csv_path)
+
+    @staticmethod
+    def embed_key(model: str, prompt: str) -> str:
+        return hashlib.sha256(f"{model}\x00{prompt}".encode("utf-8")).hexdigest()
 
     @staticmethod
     def classify(clean_name: str) -> FileType:
@@ -32,30 +41,75 @@ class Generator:
             return FileType.SEASON
         return FileType.TITLE
 
+    def open_cache(self) -> sqlite3.Connection | None:
+        try:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(self.cache_path)
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS embeddings (key TEXT PRIMARY KEY, model TEXT NOT NULL, vector BLOB NOT NULL)"
+            )
+        except (OSError, sqlite3.Error) as e:
+            logging.warning(f"Failed to create cache table: {e}")
+            conn.close()
+            conn = None
+        return conn
+
+    @staticmethod
+    def to_blob(vector: np.ndarray) -> bytes:
+        return np.asarray(vector, dtype=np.float32).tobytes()
+
+    @staticmethod
+    def from_blob(blob: bytes) -> np.ndarray:
+        return np.frombuffer(blob, dtype=np.float32)
+
     def load_reference(self, csv_path: Path) -> list:
+        conn = self.open_cache()
         logging.info(f"Loading from reference file {csv_path}")
         examples = []
         with open(csv_path, mode='r', encoding='utf-8') as csv_file:
             reader = csv.DictReader(csv_file, delimiter='\t')
             for row in reader:
-                if not row['messy_name'].strip():
+                messy = row['messy_name'].strip()
+                if not messy:
                     continue
-                response = ollama.embeddings(model=self.EMBED_MODEL,
-                                             prompt=f"search_document: {row['messy_name'].lower()}")
+                prompt = f"search_document: {row['messy_name'].lower()}"
+                key = self.embed_key(self.EMBED_MODEL, prompt)
+
+                vector = None
+                if conn is not None:
+                    cursor = conn.execute("SELECT vector FROM embeddings WHERE key=?", (key,))
+                    hit = cursor.fetchone()
+                    if hit is not None:
+                        vector = self.from_blob(hit[0])
+
+                if vector is None:
+                    response = ollama.embeddings(model=self.EMBED_MODEL, prompt=prompt)
+                    vector = response["embedding"]
+                    if conn is not None:
+                        try:
+                            conn.execute("INSERT OR REPLACE INTO embeddings (key, model, vector) VALUES (?, ?, ?)", (key, self.EMBED_MODEL, self.to_blob(vector)))
+                        except sqlite3.Error as e:
+                            logging.warning(f"Failed to insert {key} into cache: {e}")
+                            conn.rollback()
+                            conn.close()
+                            conn = None
                 examples.append({
                     "messy": row['messy_name'],
                     "clean": row['clean_name'],
                     "type": self.classify(row['clean_name']).value,
-                    "vector": response['embedding']
+                    "vector": vector
                 })
+        if conn is not None:
+            conn.commit()
+            conn.close()
         return examples
 
     @staticmethod
     def cosine_similarity(v1, v2) -> float:
-        denominator = linalg.norm(v1) * linalg.norm(v2)
+        denominator = np.linalg.norm(v1) * np.linalg.norm(v2)
         if denominator == 0:
             return 0.0
-        return float(dot(v1, v2) / denominator)
+        return float(np.dot(v1, v2) / denominator)
 
     def get_useful_references(self, filename: str, filetype: FileType) -> list:
         target_res = ollama.embeddings(model=self.EMBED_MODEL, prompt=f"search_query: {filename.lower()}")

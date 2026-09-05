@@ -18,8 +18,9 @@ class ManifestLogger:
     }
 
     def __init__(self, content_type: ContentType, original_path: Path, dry_run: bool,
-                 manifest_path: Path = default_manifest_path()):
-        self.manifest_path = manifest_path.resolve()
+                 manifest_path: Path = None):
+        path = manifest_path or default_manifest_path()
+        self.manifest_path = path.resolve()
         if not self.manifest_path.parent.exists():
             self.manifest_path.parent.mkdir(parents=True, exist_ok=True)
         self.dry_run = dry_run
