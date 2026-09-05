@@ -1,5 +1,6 @@
 import re
 import logging
+import threading
 import multiprocessing
 
 import ollama
@@ -8,6 +9,8 @@ from pathlib import Path
 from argparse import ArgumentTypeError
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
+
+tqdm.set_lock(threading.RLock())
 
 from errors import ManifestAlreadyInProgress
 from generator import Generator
@@ -103,6 +106,8 @@ class Renamey:
 
                 new_season = self.get_new_path(season_path, FileType.SEASON)
                 self.mani.log_move(season_path, new_season, FileType.SEASON)
+                self.pbar.total += 1
+                self.pbar.refresh()
 
                 for file in loose_files:
                     if file.name not in self.ignore_set:
