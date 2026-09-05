@@ -28,6 +28,8 @@ class Generator:
         self.cache_path = cache_path or default_embeddings_path()
         self.examples = self.load_reference(csv_path)
 
+    # --- Embedding and references ---
+
     @staticmethod
     def embed_key(model: str, prompt: str) -> str:
         return hashlib.sha256(f"{model}\x00{prompt}".encode("utf-8")).hexdigest()
@@ -42,6 +44,7 @@ class Generator:
         return FileType.TITLE
 
     def open_cache(self) -> sqlite3.Connection | None:
+        conn = None
         try:
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
             conn = sqlite3.connect(self.cache_path)
@@ -50,7 +53,8 @@ class Generator:
             )
         except (OSError, sqlite3.Error) as e:
             logging.warning(f"Failed to create cache table: {e}")
-            conn.close()
+            if conn is not None:
+                conn.close()
             conn = None
         return conn
 
@@ -131,6 +135,8 @@ class Generator:
                                         "type": score[1]["type"]}
         logging.debug(f"For filename {filename}, got references {got_references}")
         return [item[1] for item in scores[:limit]]
+
+    # --- Prompt building and name generation ---
 
     @staticmethod
     def build_system_prompt(context: str, filetype: FileType):

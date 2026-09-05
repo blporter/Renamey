@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from tqdm import tqdm
 
-from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty
+from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty, NoOperations
 from resources import default_manifest_path, open_existing_manifest
 from models import ManifestOperation
 
@@ -27,7 +27,7 @@ class Undoer:
 
     def undo_manifest(self):
         if not self.manifest["operations"]:
-            raise Exception("no operations to undo")
+            raise NoOperations("no operations to undo")
         for operation in reversed(self.manifest["operations"]):
             self.perform_undo(operation)
 
@@ -36,7 +36,7 @@ class Undoer:
 
     def undo_last_operation(self):
         if not self.manifest["operations"]:
-            raise Exception("no operations to undo")
+            raise NoOperations("no operations to undo")
         operation = self.manifest["operations"].pop()
         logging.debug(f"Undoing last operation: {operation}")
         self.perform_undo(operation)
@@ -53,6 +53,8 @@ class Undoer:
                 self.undo_mkdir(operation)
             except KeyError:
                 raise InvalidKeys(operation)
+            except UndoError:
+                raise
             except Exception as e:
                 raise UndoError(f"failed to undo mkdir operation: {e}")
 

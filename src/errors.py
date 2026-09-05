@@ -14,6 +14,10 @@ class UndoError(Exception):
     pass
 
 
+class NoOperations(UndoError):
+    pass
+
+
 class InvalidKeys(UndoError):
     def __init__(self, operation: dict):
         self.operation = operation
