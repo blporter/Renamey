@@ -7,6 +7,7 @@ import hashlib
 
 import numpy as np
 import ollama
+from tqdm import tqdm
 
 from errors import ModelReturnedProse
 from models import FileType, Prompts
@@ -69,40 +70,54 @@ class Generator:
     def load_reference(self, csv_path: Path) -> list:
         conn = self.open_cache()
         logging.info(f"Loading from reference file {csv_path}")
-        examples = []
+
         with open(csv_path, mode='r', encoding='utf-8') as csv_file:
             reader = csv.DictReader(csv_file, delimiter='\t')
+            prepared = []
             for row in reader:
-                messy = row['messy_name'].strip()
-                if not messy:
+                if not row['messy_name'].strip():
                     continue
                 prompt = f"search_document: {row['messy_name'].lower()}"
                 key = self.embed_key(self.EMBED_MODEL, prompt)
+                prepared.append((row, prompt, key))
 
-                vector = None
-                if conn is not None:
-                    cursor = conn.execute("SELECT vector FROM embeddings WHERE key=?", (key,))
-                    hit = cursor.fetchone()
-                    if hit is not None:
-                        vector = self.from_blob(hit[0])
+        vectors = {}
+        if conn is not None:
+            for _, _, key in prepared:
+                cursor = conn.execute("SELECT vector FROM embeddings WHERE key=?", (key,))
+                hit = cursor.fetchone()
+                if hit is not None:
+                    vectors[key] = self.from_blob(hit[0])
 
-                if vector is None:
-                    response = ollama.embeddings(model=self.EMBED_MODEL, prompt=prompt)
-                    vector = response["embedding"]
-                    if conn is not None:
-                        try:
-                            conn.execute("INSERT OR REPLACE INTO embeddings (key, model, vector) VALUES (?, ?, ?)", (key, self.EMBED_MODEL, self.to_blob(vector)))
-                        except sqlite3.Error as e:
-                            logging.warning(f"Failed to insert {key} into cache: {e}")
-                            conn.rollback()
-                            conn.close()
-                            conn = None
-                examples.append({
-                    "messy": row['messy_name'],
-                    "clean": row['clean_name'],
-                    "type": self.classify(row['clean_name']).value,
-                    "vector": vector
-                })
+        missing = [item for item in prepared if item[2] not in vectors]
+        iterator = missing
+        if missing:
+            tqdm.write(
+                f"First-time setup: generating embeddings for {len(missing)} reference entries. This only happens once and will be cached for next time.")
+            iterator = tqdm(missing, desc="Preparing references", unit="ref", bar_format="{l_bar}{bar:60}{r_bar}",
+                            ascii="░█")
+
+        for row, prompt, key in iterator:
+            response = ollama.embeddings(model=self.EMBED_MODEL, prompt=prompt)
+            vector = response["embedding"]
+            vectors[key] = vector
+            if conn is not None:
+                try:
+                    conn.execute("INSERT OR REPLACE INTO embeddings (key, model, vector) VALUES (?, ?, ?)",
+                                 (key, self.EMBED_MODEL, self.to_blob(vector)))
+                except sqlite3.Error as e:
+                    logging.warning(f"Failed to insert {key} into cache: {e}")
+                    conn.rollback()
+                    conn.close()
+                    conn = None
+
+        examples = [{
+            "messy": row['messy_name'],
+            "clean": row['clean_name'],
+            "type": self.classify(row['clean_name']).value,
+            "vector": vectors[key]
+        } for row, prompt, key in prepared]
+
         if conn is not None:
             conn.commit()
             conn.close()
