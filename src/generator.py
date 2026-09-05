@@ -6,6 +6,7 @@ from numpy import dot, linalg
 
 import ollama
 
+from errors import ModelReturnedProse
 from models import FileType, Prompts
 
 
@@ -126,7 +127,7 @@ Name: {filename}
                                stream=False)
         new_name = response["message"]["content"].strip()
         if "\n" in new_name:
-            raise ValueError(f"model returned prose instead of a filename: {new_name!r}")
+            raise ModelReturnedProse(f"model returned prose instead of a filename: {new_name!r}")
         if filetype in (FileType.TITLE, FileType.MOVIE):
             self.title_name = self.DATE_COMPILE.sub("", new_name).strip()
         return new_name
