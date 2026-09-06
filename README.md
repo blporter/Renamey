@@ -11,6 +11,8 @@ It can then be run as a script via:
 ./renamey rename -c show -f "/Absolute/Path/To/Junk/Name"
 ```
 
+Note: The first cold-start run can be slow. Subsequent runs should be fast.
+
 ### Usage
 
 Content type (movie or show) and filepath are required. Optional parameters include models, verbosity (-v or -vv), resume, and dry run.
