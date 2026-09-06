@@ -13,7 +13,8 @@ from errors import ManifestAlreadyInProgress
 from generator import Generator
 from manifest import ManifestLogger
 from parser import FileParser
-from models import FileType, ContentType, ManifestStatus, ManifestOperation, ConfigArguments, UndoArguments
+from models import FileType, ContentType, ManifestStatus, ManifestOperation, ConfigArguments, UndoArguments, \
+    RenameArguments
 from resources import resource_path, default_manifest_path, open_existing_manifest
 from undoer import Undoer
 
@@ -30,7 +31,7 @@ class Renamey:
     filepath: Path
     dry_run: bool
 
-    def __init__(self, args, ignore_set: set[str]):
+    def __init__(self, args: RenameArguments, ignore_set: set[str]):
         self.ignore_set = ignore_set
         self.content_type = args.content_type
         self.filepath = args.filepath
@@ -42,7 +43,7 @@ class Renamey:
         self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
         file_count = sum(1 for _ in self.filepath.rglob('*'))
         self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format="{l_bar}{bar:60}{r_bar}",
-                         ascii="░█")
+                         ascii=" ▬")
 
     @staticmethod
     def perform_undo():
@@ -196,9 +197,11 @@ def main():
         logging.critical(f"Ollama unavailable: {e}")
         return
 
-    renamey = Renamey(args, ignore_set)
-    renamey.run()
-
+    if isinstance(args, RenameArguments):
+        renamey = Renamey(args, ignore_set)
+        renamey.run()
+    else:
+        logging.critical("Invalid arguments")
 
 if __name__ == '__main__':
     with logging_redirect_tqdm():

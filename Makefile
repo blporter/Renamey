@@ -1,11 +1,11 @@
-.PHONY: install-models run undo build test install uninstall
+.PHONY: pull-models run undo build test install uninstall
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
 
 BUILD_OUTPUT := dist/renamey/renamey
 
-install-models:
+pull-models:
 	ollama pull $(TITLE_MODEL)
 	ollama pull $(EPISODE_MODEL)
 	ollama pull "nomic-embed-text"
