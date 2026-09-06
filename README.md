@@ -2,8 +2,17 @@
 
 Use local AI models to bulk rename media files with junk names into clean Title Case. The intended use for this program is to automate renaming into the folder structure expected by a Jellyfin media server.
 
-### Setup
+### Install
 
+The current release can be downloaded from the [Releases](https://github.com/blporter/Renamey/releases) page.
+
+Note that this is an unsigned build. If MacOS quarantines it, run this one-time command `xattr -dr com.apple.quarantine /path/to/download/renamey` on the unzipped folder before installing.
+
+The release comes bundled with a script which can be run to install the program to `/usr/local/opt/renamey` and the symlink `/usr/local/bin/renamey`. After installing, the downloaded release files can be deleted.
+
+It can later be uninstalled with `/usr/local/opt/renamey/install.sh uninstall`
+
+#### Setup from source
 Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a Unix Executable.
 
 It can then be run as a script via:
