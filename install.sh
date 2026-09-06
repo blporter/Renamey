@@ -10,7 +10,14 @@
 set -euo pipefail
 
 APP_NAME="renamey"
-BUILD_DIR="dist/${APP_NAME}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -e "${SCRIPT_DIR}/_internal" ]; then
+    BUILD_DIR="$SCRIPT_DIR"
+else
+    BUILD_DIR="${SCRIPT_DIR}/dist/${APP_NAME}"
+fi
+
 INSTALL_DIR="/usr/local/opt/${APP_NAME}"
 BIN_LINK="/usr/local/bin/${APP_NAME}"
 
@@ -39,6 +46,9 @@ install() {
     $SUDO rm -rf "$INSTALL_DIR"
     $SUDO mkdir -p "$INSTALL_DIR"
     $SUDO cp -R "${BUILD_DIR}/." "$INSTALL_DIR/"
+
+    # Don't ship the installer itself into /usr/local/opt/renamey.
+    $SUDO rm -f "${INSTALL_DIR}/$(basename "${BASH_SOURCE[0]}")"
 
     echo "Linking ${BIN_LINK} -> ${INSTALL_DIR}/${APP_NAME}"
     $SUDO mkdir -p "$(dirname "$BIN_LINK")"

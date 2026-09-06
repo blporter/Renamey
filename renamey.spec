@@ -10,7 +10,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['pytest', 'pytest-mock', 'pytest-subtests'],
+    excludes=['pytest', 'pytest-mock', 'pytest-subtests', 'pyinstaller'],
     noarchive=False,
     optimize=0,
 )
