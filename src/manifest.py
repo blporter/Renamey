@@ -19,7 +19,7 @@ class ManifestLogger:
     }
 
     def __init__(self, content_type: ContentType, original_path: Path, dry_run: bool,
-                 manifest_path: Path = None):
+                 manifest_path: Path | None = None):
         path = manifest_path or default_manifest_path()
         self.manifest_path = path.resolve()
         if not self.manifest_path.parent.exists():

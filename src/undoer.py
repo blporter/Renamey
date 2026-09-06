@@ -10,7 +10,7 @@ from models import ManifestOperation
 
 
 class Undoer:
-    def __init__(self, manifest_path: Path = None):
+    def __init__(self, manifest_path: Path | None = None):
         path = manifest_path or default_manifest_path()
         self.manifest_path = path.resolve()
         existing_manifest = open_existing_manifest(self.manifest_path)

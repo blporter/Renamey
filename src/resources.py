@@ -31,7 +31,7 @@ def default_config_path() -> Path:
     return Path.home() / ".cache/renamey" / "config.json"
 
 
-def open_existing_manifest(manifest_path: Path = None) -> dict | None:
+def open_existing_manifest(manifest_path: Path | None = None) -> dict | None:
     path = (manifest_path or default_manifest_path()).resolve()
     if not path.exists():
         return None
@@ -43,7 +43,7 @@ def open_existing_manifest(manifest_path: Path = None) -> dict | None:
             return None
 
 
-def open_existing_config(config_path: Path = None) -> tuple[str, str]:
+def open_existing_config(config_path: Path | None = None) -> tuple[str, str]:
     path = (config_path or default_config_path()).resolve()
     config = {}
     if path.exists():
@@ -57,7 +57,7 @@ def open_existing_config(config_path: Path = None) -> tuple[str, str]:
     return title_model, episode_model
 
 
-def write_config(config: dict, config_path: Path = None):
+def write_config(config: dict, config_path: Path | None = None):
     path = (config_path or default_config_path()).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as file:

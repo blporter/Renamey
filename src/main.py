@@ -203,6 +203,7 @@ def main():
     else:
         logging.critical("Invalid arguments")
 
+
 if __name__ == '__main__':
     with logging_redirect_tqdm():
         main()

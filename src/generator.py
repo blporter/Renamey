@@ -22,7 +22,7 @@ class Generator:
     DATE_COMPILE = re.compile(r"\s*\((?:19|20)\d{2}(?:-(?:19|20)\d{2})?\)\s*$")
 
     def __init__(self, csv_path: Path, title_model: str, episode_model: str,
-                 cache_path: Path = None):
+                 cache_path: Path | None = None):
         self.TITLE_MODEL = title_model
         self.EPISODE_MODEL = episode_model
         self.title_name = ""
