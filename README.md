@@ -13,6 +13,9 @@ The release comes bundled with a script which can be run to install the program 
 It can later be uninstalled with `/usr/local/opt/renamey/install.sh uninstall`
 
 #### Setup from source
+
+The Makefile includes environment setup and requirements installation. The `make setup` command can be run by itself, and is also invoked by the other `make` targets.
+
 Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a Unix Executable.
 
 It can then be run as a script via:
