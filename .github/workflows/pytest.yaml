@@ -1,8 +1,6 @@
 name: Run Pytest
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -25,4 +23,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests (skip eval tests)
-        run: pytest tests -vs --ignore-glob="*_eval_.py"
+        run: pytest tests -vs --ignore-glob="*_eval_*.py"
