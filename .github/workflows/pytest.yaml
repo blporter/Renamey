@@ -24,3 +24,6 @@ jobs:
 
       - name: Run tests (skip eval tests)
         run: pytest tests -vs --ignore-glob="*_eval_*.py"
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
