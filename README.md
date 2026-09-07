@@ -6,7 +6,7 @@ Use local AI models to bulk rename media files with junk names into clean Title 
 
 The current release can be downloaded from the [Releases](https://github.com/blporter/Renamey/releases) page.
 
-Note that this is an unsigned build. If MacOS quarantines it, run this one-time command `xattr -dr com.apple.quarantine /path/to/download/renamey` on the unzipped folder before installing.
+Note that this is an unsigned build. Run this one-time command `xattr -dr com.apple.quarantine /path/to/download/renamey` on the unzipped folder before installing to prevent MacOS from quarantining or run it on the installed folder afterward. The `install` script will include this instruction if the build is quarantined.
 
 The release comes bundled with a script which can be run to install the program to `/usr/local/opt/renamey` and the symlink `/usr/local/bin/renamey`. After installing, the downloaded release files can be deleted.
 

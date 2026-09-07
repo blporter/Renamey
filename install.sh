@@ -41,13 +41,6 @@ install() {
         exit 1
     fi
 
-    if xattr -p com.apple.quarantine "$BUILD_DIR" >/dev/null 2>&1; then
-        echo "Note: this build is unsigned and macOS has quarantined it."
-        echo "If Gatekeeper blocks it, clear the flag with:"
-        echo "    xattr -dr com.apple.quarantine \"${BUILD_DIR}\""
-        echo
-    fi
-
     echo "Installing ${APP_NAME} to ${INSTALL_DIR}"
 
     $SUDO rm -rf "$INSTALL_DIR"
@@ -63,6 +56,15 @@ install() {
     echo "Installed to: ${INSTALL_DIR}"
     echo "Symlinked at: ${BIN_LINK}"
     echo "You can now safely delete the downloaded/unzipped folder."
+
+    if xattr -p com.apple.quarantine "$INSTALL_DIR" >/dev/null 2>&1; then
+        echo
+        echo "Note: this build is unsigned and macOS has quarantined it."
+        echo "If Gatekeeper blocks it, clear the flag with:"
+        echo "    xattr -dr com.apple.quarantine \"${INSTALL_DIR}\""
+    fi
+
+    echo
     echo "To uninstall later, run:"
     echo "    ${INSTALL_DIR}/$(basename "${BASH_SOURCE[0]}") uninstall"
 }
