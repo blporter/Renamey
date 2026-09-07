@@ -16,11 +16,11 @@ It can later be uninstalled with `/usr/local/opt/renamey/install.sh uninstall`
 
 The Makefile includes environment setup and requirements installation. The `make setup` command can be run by itself, and is also invoked by the other `make` targets.
 
-Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build a Unix Executable.
+Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build the bundled project.
 
 It can then be run as a script via:
 ```bash
-./renamey rename -c show -f "/Absolute/Path/To/Junk/Name"
+./dist/renamey rename -c show -f "/Absolute/Path/To/Junk/Name"
 ```
 
 Note: The first cold-start run can be slow. Subsequent runs should be fast.
@@ -29,22 +29,22 @@ Note: The first cold-start run can be slow. Subsequent runs should be fast.
 
 Content type (movie or show) and filepath are required. Optional parameters include models, verbosity (-v or -vv), resume, and dry run.
 ```bash
-./renamey rename --content-type show --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v --dry-run
+renamey rename --content-type show --filepath "/Absolute/Path/To/Junk/Name" --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b" -v --dry-run
 ```
 
 An interrupted run can be resumed by passing the `--resume` flag. This will skip any files that have already been processed and rerun starting from the last file. It is also compatible with `--dry-run`.
 ```bash
-./renamey rename --content-type show --filepath "/Absolute/Path/To/Junk/Name" --resume --dry-run -v
+renamey rename --content-type show --filepath "/Absolute/Path/To/Junk/Name" --resume --dry-run -v
 ```
 
 Undo the previous rename operation by using the `undo` subcommand instead of `rename`. Undo has no other flags except optional verbosity (-v or -vv).
 ```bash
-./renamey undo -v
+renamey undo -v
 ```
 
 Modify the default models by running `renamey config` and providing the model names. Running `renamey rename` will use the new models by default. Both `title_model` and `episode_model` are optional.
 ```bash
-./renamey config --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b"
+renamey config --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b"
 ```
 
 ### Overview
