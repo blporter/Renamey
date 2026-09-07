@@ -24,3 +24,9 @@ jobs:
 
       - name: Run tests (skip eval tests)
         run: pytest tests -vs --ignore-glob="*_eval_*.py"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: .pytest_cache
