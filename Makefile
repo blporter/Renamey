@@ -1,4 +1,4 @@
-.PHONY: setup pull-models run undo build build-release test uninstall
+.PHONY: setup pull-models test run undo build build-release
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
@@ -22,6 +22,9 @@ pull-models:
 	ollama pull $(EPISODE_MODEL)
 	ollama pull "nomic-embed-text"
 
+test: setup
+	.venv/bin/pytest tests -vs
+
 run: setup
 	.venv/bin/python3 src/main.py rename -c "$(CONTENT)" -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) -v --resume
 
@@ -32,16 +35,8 @@ build: $(BUILD_OUTPUT)
 
 $(BUILD_OUTPUT): setup renamey.spec $(wildcard src/*.py) naming_reference.csv ignore_list.json
 	.venv/bin/pyinstaller renamey.spec
-	./install.sh
 
 build-release: build
-	cp install.sh dist/renamey/install.sh
 	rm -f dist/$(RELEASE_ZIP)
 	cd dist && zip -r $(RELEASE_ZIP) renamey
 	@echo "Created dist/$(RELEASE_ZIP)"
-
-uninstall:
-	./install.sh uninstall
-
-test: setup
-	.venv/bin/pytest tests -vs
