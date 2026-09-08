@@ -1,4 +1,4 @@
-.PHONY: setup pull-models test run undo build build-release
+.PHONY: setup pull-models test run-rename run-undo build build-release
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
@@ -25,10 +25,10 @@ pull-models:
 test: setup
 	.venv/bin/pytest tests -vs
 
-run: setup
+run-rename: setup
 	.venv/bin/python3 src/main.py rename -c "$(CONTENT)" -f "$(FILEPATH)" -t $(TITLE_MODEL) -e $(EPISODE_MODEL) -v --resume
 
-undo: setup
+run-undo: setup
 	.venv/bin/python3 src/main.py undo
 
 build: $(BUILD_OUTPUT)
