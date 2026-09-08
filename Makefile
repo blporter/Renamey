@@ -1,4 +1,4 @@
-.PHONY: setup pull-models run undo build build-release test install uninstall
+.PHONY: setup pull-models run undo build build-release test uninstall
 
 TITLE_MODEL ?= "gemma4:e4b-mlx"
 EPISODE_MODEL ?= "llama3.1:8b"
