@@ -11,7 +11,7 @@ tqdm.set_lock(threading.RLock())
 
 from errors import ManifestAlreadyInProgress
 from generator import Generator
-from manifest import ManifestLogger
+from manifest import Manifest
 from parser import FileParser
 from models import FileType, ContentType, ManifestStatus, ManifestOperation, ConfigArguments, UndoArguments, \
     RenameArguments
@@ -25,7 +25,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 class Renamey:
     gen: Generator
-    mani: ManifestLogger
+    mani: Manifest
     ignore_set: set[str]
     content_type: ContentType
     filepath: Path
@@ -50,7 +50,7 @@ class Renamey:
         try:
             undoer = Undoer()
             undoer.undo_manifest()
-            ManifestLogger.pretty_print(undoer.manifest, reverse=True)
+            Manifest.print(undoer.manifest, reverse=True)
         except (ValueError, KeyError, Exception) as e:
             logging.critical(f"Failed to undo: {e}")
 
@@ -67,7 +67,7 @@ class Renamey:
             else:
                 raise ManifestAlreadyInProgress(str(default_manifest_path()))
         try:
-            self.mani = ManifestLogger(self.content_type, self.filepath, self.dry_run)
+            self.mani = Manifest(self.content_type, self.filepath, self.dry_run)
         except Exception as e:
             logging.critical(f"Failed to create manifest: {e}")
             return
@@ -82,7 +82,7 @@ class Renamey:
     def perform_rename(self):
         original_name = self.filepath.name
         new_path = self.get_new_path(self.filepath, FileType.TITLE)
-        self.mani.log_move(self.filepath, new_path, FileType.TITLE)
+        self.mani.logger.log_move(self.filepath, new_path, FileType.TITLE)
         logical_path = new_path
         if not self.dry_run:
             self.filepath = new_path
@@ -94,10 +94,10 @@ class Renamey:
                 child_path = logical_path / file.name
                 self.handle_nested_folders(file, child_path)
 
-        self.mani.log_complete()
+        self.mani.logger.log_complete()
         self.pbar.update(self.pbar.total - self.pbar.n)
         self.pbar.close()
-        ManifestLogger.pretty_print(self.mani.manifest)
+        Manifest.print(self.mani.manifest)
 
     def handle_season_with_no_folder(self, filepath: Path, logical_path: Path, original_name: str) -> bool:
         if self.content_type == ContentType.SHOW:
@@ -105,18 +105,18 @@ class Renamey:
                 season_name = original_name + " (New Dir)"
                 season_path = logical_path / season_name
                 loose_files = [file for file in filepath.iterdir() if file.is_file()]
-                self.mani.log_mkdir(season_path, filetype=FileType.SEASON)
+                self.mani.logger.log_mkdir(season_path, filetype=FileType.SEASON)
                 self.move_episodes_into_season(filepath, logical_path, season_name)
 
                 new_season = self.get_new_path(season_path, FileType.SEASON)
-                self.mani.log_move(season_path, new_season, FileType.SEASON)
+                self.mani.logger.log_move(season_path, new_season, FileType.SEASON)
                 self.pbar.total += 1
 
                 for file in loose_files:
                     if file.name not in self.ignore_set:
                         episode_logical_path = new_season / file.name
                         new_episode = self.get_new_path(episode_logical_path, FileType.EPISODE)
-                        self.mani.log_move(episode_logical_path, new_episode, FileType.EPISODE)
+                        self.mani.logger.log_move(episode_logical_path, new_episode, FileType.EPISODE)
                 return True
         return False
 
@@ -125,7 +125,7 @@ class Renamey:
         for file in filepath.iterdir():
             if file.is_file():
                 target_path = logical_path / season_name / file.name
-                self.mani.log_move(logical_path / file.name, target_path, filetype=FileType.EPISODE)
+                self.mani.logger.log_move(logical_path / file.name, target_path, filetype=FileType.EPISODE)
                 logging.debug(f"Moved {file.name} to {target_path.name}")
 
     def get_new_path(self, filepath: Path, filetype: FileType) -> Path:
@@ -153,7 +153,7 @@ class Renamey:
         if self.content_type == ContentType.SHOW:
             if filepath.is_dir():
                 new_logical_path = self.get_new_path(logical_path, FileType.SEASON)
-                self.mani.log_move(logical_path, new_logical_path, FileType.SEASON)
+                self.mani.logger.log_move(logical_path, new_logical_path, FileType.SEASON)
                 if not self.dry_run:
                     filepath = new_logical_path
                 for file in filepath.iterdir():
@@ -161,11 +161,11 @@ class Renamey:
                     self.handle_nested_folders(file, child_path)
             else:
                 new_file = self.get_new_path(logical_path, FileType.EPISODE)
-                self.mani.log_move(logical_path, new_file, FileType.EPISODE)
+                self.mani.logger.log_move(logical_path, new_file, FileType.EPISODE)
 
         if self.content_type == ContentType.MOVIE:
             new_file = self.get_new_path(logical_path, FileType.MOVIE)
-            self.mani.log_move(logical_path, new_file, FileType.MOVIE)
+            self.mani.logger.log_move(logical_path, new_file, FileType.MOVIE)
 
 
 def main():

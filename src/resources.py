@@ -11,8 +11,8 @@ DEFAULT_EPISODE_MODEL = "llama3.1:8b"
 def resource_dir() -> Path:
     bundle_dir: str | None = getattr(sys, '_MEIPASS', None)
     if bundle_dir is not None:
-        return Path(bundle_dir)
-    return Path(__file__).resolve().parent.parent
+        return Path(bundle_dir) / "assets"
+    return Path(__file__).resolve().parent / "assets"
 
 
 def resource_path(name: str) -> Path:
