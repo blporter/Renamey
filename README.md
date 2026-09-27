@@ -57,7 +57,7 @@ The `main.py` script handles traversing for nested folder structures, `parser.py
 
 The default models used are `gemma4:e4b-mlx` for title name generation and `llama3.1:8b` for episode name parsing. For RAG references and context, we use `nomic-embed-text`.
 
-The data source for RAG is the local database `naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts.
+The data source for RAG is the local database `src/assets/naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts.
 
 A "messy" show with nested season folders will go from this:
 <pre>
