@@ -2,7 +2,7 @@ import json
 import pytest
 
 from undoer import Undoer
-from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty, NoOperations
+from errors import InvalidKeys, PathNotDir, DirNotEmpty, NoOperations
 from models import ManifestOperation
 
 

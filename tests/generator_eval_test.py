@@ -4,6 +4,7 @@ import pytest
 import ollama
 
 from generator import Generator
+from generator.embed import EmbedHelper
 from models import FileType
 from resources import resource_path
 
@@ -14,10 +15,10 @@ EPISODE_MODEL = "llama3.1:8b"
 @pytest.fixture(scope="module")
 def generator() -> Generator:
     try:
-        ollama.embeddings(model=Generator.EMBED_MODEL, prompt="ping")
+        ollama.embeddings(model=EmbedHelper.EMBED_MODEL, prompt="ping")
     except Exception as e:
         pytest.fail(f"Ollama unavailable: {e}")
-    return Generator(csv_path=resource_path("naming_reference.csv"),
+    return Generator(naming_reference=resource_path("naming_reference.csv"),
                      title_model=TITLE_MODEL,
                      episode_model=EPISODE_MODEL)
 
@@ -29,11 +30,11 @@ def reset_title_name(generator):
 
 class TestGeneratorEval:
     def test_init_loads_references(self, generator: Generator):
-        assert len(generator.examples) > 190
+        assert len(generator.embedder.examples) > 190
 
     def test_get_references_returns_expected_titles(self, generator: Generator):
         filename = "Long name title"
-        references = generator.get_useful_references(filename, FileType.TITLE)
+        references = generator.embedder.get_useful_references(filename, FileType.TITLE)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -41,7 +42,7 @@ class TestGeneratorEval:
 
     def test_get_references_returns_expected_seasons(self, generator: Generator):
         filename = "S01Part1"
-        references = generator.get_useful_references(filename, FileType.SEASON)
+        references = generator.embedder.get_useful_references(filename, FileType.SEASON)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -50,7 +51,7 @@ class TestGeneratorEval:
 
     def test_get_references_returns_expected_episodes(self, generator: Generator):
         filename = "Long name title - Season 1 Episode 1.mp4"
-        references = generator.get_useful_references(filename, FileType.EPISODE)
+        references = generator.embedder.get_useful_references(filename, FileType.EPISODE)
         got_references = []
         for ref in references:
             got_references.append(ref['messy'])
@@ -58,12 +59,12 @@ class TestGeneratorEval:
 
     def test_references_are_stable_across_cached_reload(self, tmp_path):
         cache = tmp_path / "embeddings.sqlite"
-        args = dict(csv_path=resource_path("naming_reference.csv"),
+        args = dict(naming_reference=resource_path("naming_reference.csv"),
                     title_model=TITLE_MODEL, episode_model=EPISODE_MODEL,
                     cache_path=cache)
-        first = Generator(**args).get_useful_references("Long name title", FileType.TITLE)
+        first = Generator(**args).embedder.get_useful_references("Long name title", FileType.TITLE)
         assert cache.exists()
-        second = Generator(**args).get_useful_references("Long name title", FileType.TITLE)
+        second = Generator(**args).embedder.get_useful_references("Long name title", FileType.TITLE)
         assert [ref["messy"] for ref in first] == [ref["messy"] for ref in second]
 
     def test_get_new_name_returns_expected_movies(self, generator: Generator, subtests):
