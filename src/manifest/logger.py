@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from models import ManifestOperation, ManifestStatus, FileType
+from errors import FileCollisionError
 
 
 class LoggingHelper:
@@ -21,6 +22,10 @@ class LoggingHelper:
                 json.dump(manifest, file, indent=4)
 
     def log_move(self, from_path: Path, to_path: Path, filetype: FileType):
+        if from_path.resolve() == to_path.resolve():
+            logging.warning(f"Skipping {from_path}: source and destination are identical")
+            return
+
         operation = {
             "op_type": ManifestOperation.MOVE.value,
             "from": str(from_path),
@@ -31,6 +36,11 @@ class LoggingHelper:
         if operation in self.manifest["operations"]:
             logging.debug(f"Skipping move operation for {from_path} --> {to_path}, already in manifest")
             return
+
+        if to_path.exists():
+            logging.error(f"Destination already exists: {to_path}")
+            raise FileCollisionError(str(from_path), str(to_path))
+
         operation["status"] = ManifestStatus.IN_PROGRESS.value
         self.manifest["operations"].append(operation)
         self.dump_manifest_to_file(self.manifest_path, self.manifest, self.dry_run)

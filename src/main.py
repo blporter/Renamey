@@ -9,13 +9,13 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 tqdm.set_lock(threading.RLock())
 
-from errors import ManifestAlreadyInProgress
+from errors import ManifestAlreadyInProgress, FileCollisionError
 from generator import Generator
 from manifest import Manifest
 from parser import FileParser
 from models import FileType, ContentType, ManifestStatus, ManifestOperation, ConfigArguments, UndoArguments, \
     RenameArguments
-from resources import resource_path, default_manifest_path, open_existing_manifest
+from resources import resource_path, default_manifest_path, open_existing_manifest, get_reference_path
 from undoer import Undoer
 
 logging.basicConfig(level=logging.WARNING)
@@ -40,7 +40,7 @@ class Renamey:
         self.dry_run = args.dry_run
         self.resume = args.resume
 
-        self.gen = Generator(resource_path("naming_reference.csv"), title_model, episode_model)
+        self.gen = Generator(get_reference_path(), title_model, episode_model)
         file_count = sum(1 for _ in self.filepath.rglob('*'))
         self.pbar = tqdm(total=file_count, unit="file", desc="Renaming", bar_format="{l_bar}{bar:60}{r_bar}",
                          ascii=" ▬")
@@ -77,7 +77,11 @@ class Renamey:
             if first_op["op_type"] == ManifestOperation.MOVE.value and first_op["filetype"] == FileType.TITLE.value and \
                     first_op["status"] == ManifestStatus.COMPLETE.value:
                 self.gen.title_name = Generator.DATE_COMPILE.sub("", self.filepath.name).strip()
-        self.perform_rename()
+        try:
+            self.perform_rename()
+        except FileCollisionError as e:
+            self.pbar.close()
+            logging.critical(f"Failed to perform rename: {e}")
 
     def perform_rename(self):
         original_name = self.filepath.name
