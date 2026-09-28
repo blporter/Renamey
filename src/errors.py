@@ -32,3 +32,14 @@ class PathNotDir(UndoError):
 
 class DirNotEmpty(UndoError):
     pass
+
+class FileCollisionError(Exception):
+    def __init__(self, from_path: str, to_path: str):
+        self.from_path = from_path
+        self.to_path = to_path
+
+    def __str__(self):
+        return (
+            f"Cannot move {self.from_path} -> {self.to_path}: file already exists.\n"
+            f"Renaming aborted to prevent overwrite. Run `renamey undo` to revert."
+        )

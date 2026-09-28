@@ -2,8 +2,9 @@ import json
 import pytest
 
 from undoer import Undoer
-from errors import UndoError, InvalidKeys, PathNotDir, DirNotEmpty, NoOperations
-from models import ManifestOperation
+from errors import InvalidKeys, PathNotDir, DirNotEmpty, NoOperations, FileCollisionError
+from models import ManifestOperation, ContentType, FileType
+from manifest import Manifest
 
 
 def move_op(from_path, to_path):
@@ -124,3 +125,37 @@ class TestUndoerMethods:
         undoer = Undoer.from_manifest({"operations": []})
         with pytest.raises(NoOperations):
             undoer.undo_last_operation()
+
+    def test_undo_after_aborted_collision(self, tmp_path):
+        show_path = tmp_path / "show"
+        show_path.mkdir()
+        file1 = show_path / "ep01.mkv"
+        file2 = show_path / "ep02.mkv"
+        existing_target = show_path / "Renamed_ep01.mkv"
+        file1.write_text("ep1 data")
+        file2.write_text("ep2 data")
+        existing_target.write_text("original renamed ep1")
+
+        manifest_file = tmp_path / "manifest.json"
+        mani = Manifest(ContentType.SHOW, show_path, False, manifest_file)
+
+        target1 = show_path / "Custom_ep01.mkv"
+        mani.logger.log_move(file1, target1, FileType.EPISODE)
+        assert target1.exists()
+        assert not file1.exists()
+
+        with pytest.raises(FileCollisionError):
+            mani.logger.log_move(file2, existing_target, FileType.EPISODE)
+        assert file2.exists()
+        assert existing_target.read_text() == "original renamed ep1"
+
+        undoer = Undoer(manifest_file)
+        undoer.undo_manifest()
+
+        assert file1.exists()
+        assert file1.read_text() == "ep1 data"
+        assert not target1.exists()
+        assert file2.exists()
+        assert file2.read_text() == "ep2 data"
+        assert existing_target.read_text() == "original renamed ep1"
+        assert not manifest_file.exists()

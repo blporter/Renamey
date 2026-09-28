@@ -5,7 +5,7 @@ a = Analysis(
     ['src/main.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('naming_reference.csv', '.'), ('ignore_list.json', '.')],
+    datas=[('src/assets/naming_reference.csv', 'assets'), ('src/assets/ignore_list.json', 'assets')],
     hiddenimports=['_socket', 'select', '_multiprocessing', '_posixsubprocess'],
     hookspath=[],
     hooksconfig={},
