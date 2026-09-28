@@ -4,6 +4,7 @@ from typing import Callable
 
 import pytest
 
+from errors import FileCollisionError
 from manifest import Manifest
 from models import ContentType, ManifestStatus, ManifestOperation, FileType
 
@@ -149,6 +150,35 @@ class TestManifestMethods:
         assert (show_path / file_names[0]).exists()
         assert not (show_path / file_names[1]).exists()
         assert not (tmp_path / "test.json").exists()
+
+    def test_log_move_raises_collision_error_when_target_exists(self, tmp_path):
+        show_path = self.create_paths(tmp_path, add_file="source.mkv")
+        (show_path / "dest.mkv").touch()
+        mani = Manifest(ContentType.SHOW, show_path, False, tmp_path / "test.json")
+        with pytest.raises(FileCollisionError):
+            mani.logger.log_move(show_path / "source.mkv", show_path / "dest.mkv", FileType.EPISODE)
+        assert (show_path / "source.mkv").exists()
+        assert (show_path / "dest.mkv").exists()
+        assert len(mani.manifest["operations"]) == 0
+
+    def test_log_move_does_not_overwrite_target_content(self, tmp_path):
+        show_path = self.create_paths(tmp_path)
+        source = show_path / "source.mkv"
+        dest = show_path / "dest.mkv"
+        dest_text = "dest file data"
+        source.write_text("source file data")
+        dest.write_text(dest_text)
+        mani = Manifest(ContentType.SHOW, show_path, False, tmp_path / "test.json")
+        with pytest.raises(FileCollisionError):
+            mani.logger.log_move(source, dest, FileType.EPISODE)
+        assert dest.read_text() == dest_text
+
+    def test_log_move_skips_identical_source_and_destination(self, tmp_path):
+        show_path = self.create_paths(tmp_path, add_file="same.mkv")
+        mani = Manifest(ContentType.SHOW, show_path, False, tmp_path / "test.json")
+        mani.logger.log_move(show_path / "same.mkv", show_path / "same.mkv", FileType.EPISODE)
+        assert (show_path / "same.mkv").exists()
+        assert len(mani.manifest["operations"]) == 0
 
     # --- Tests for mkdir ---
 
