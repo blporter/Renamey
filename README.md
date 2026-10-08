@@ -18,16 +18,16 @@ brew uninstall renamey
 
 #### Setup from source
 
-The Makefile includes environment setup and requirements installation. The `make setup` command can be run by itself, and is also invoked by the other `make` targets.
+The Makefile includes environment setup and installation. The `make setup` command can be run by itself, and is also invoked by the other `make` targets.
 
-Use `make run CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` using `pyinstaller` to build the bundled project.
+Use `make run-rename CONTENT=movie FILEPATH="/Absolute/Path/To/Junk/Name"` to run from source, or `make build` to build the bundled project.
 
 It can then be run as a script via:
 ```bash
 ./dist/renamey rename -c show -f "/Absolute/Path/To/Junk/Name"
 ```
 
-Note: The first cold-start run can be slow. Subsequent runs should be fast.
+**Note**: The first cold-start run can be slow. Subsequent runs should be fast.
 
 ### Usage
 
@@ -53,11 +53,11 @@ renamey config --title-model "gemma4:e4b-mlx" --episode-model "llama3.1:8b"
 
 ### Overview
 
-The `main.py` script handles traversing for nested folder structures, `parser.py` handles argument parsing and validation, `manifest.py` handles logging and file movement, `generator.py` handles the AI workflow and context references, and finally `undoer.py` handles undoing an existing manifest.
+The `main` script handles traversing for nested folder structures, `parser` handles argument parsing and validation, `manifest` handles logging and file movement, `generator` handles the AI workflow and context references, and finally `undoer` handles undoing an existing manifest.
 
 The default models used are `gemma4:e4b-mlx` for title name generation and `llama3.1:8b` for episode name parsing. For RAG references and context, we use `nomic-embed-text`.
 
-The data source for RAG is the local database `src/assets/naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts.
+The data source for RAG is the local database `src/assets/naming_reference.csv`, which contains a collection of "messy" file names and their expected "clean" counterparts. The script will compare to the diff of the file on this repo, and pull any new entries. It uses the version bundled in the release if run offline or if unable to check the git diff.
 
 A "messy" show with nested season folders will go from this:
 <pre>
